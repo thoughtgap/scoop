@@ -1,0 +1,28 @@
+{
+  "name": "schicke-chicks",
+  "version": "1.0.0",
+  "description": "schicke-chicks server",
+  "main": "index.js",
+  "scripts": {
+    "tsc": "tsc",
+    "dev": "node node_modules/nodemon/bin/nodemon.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thoughtgap/schicke-chicks.git"
+  },
+  "author": "moritz",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thoughtgap/schicke-chicks/issues"
+  },
+  "homepage": "https://github.com/thoughtgap/schicke-chicks#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "moment": "^2.27.0",
+    "node-dht-sensor": "^0.4.2",
+    "nodemon": "^2.0.4",
+    "onoff": "^6.0.0"
+  }
+}
