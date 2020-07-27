@@ -1,55 +1,160 @@
+// !TODO kalib oben, dann kann man 2x hintereinander runter machen.
+
 var express = require('express');
 var app = express();
+const fs = require('fs');
 
 var initialisiert = false;
 
 var initialPosition = null;
 var initialPositionManuell = null;
 
-var hochSek = 0;
-var runterSek = 0;
-
 var log = [];
 
-const sensorObenMontiert = false;
-const sensorUntenMontiert = false;
-const maxSekundenEinWeg = 6.2;
-const korrekturSekunden = 0.5;
+let config = require('./config.json');
+console.log(config);
+
+const sensorObenMontiert = config.sensorObenMontiert;
+const sensorUntenMontiert = config.sensorUntenMontiert;
+const ganzeFahrtSek = config.ganzeFahrtSek;
+const maxSekundenEinWeg = config.maxSekundenEinWeg;
+const korrekturSekunden = config.korrekturSekunden;
+
+const motorAus = config.motorAus;
+const motorEin = config.motorEin;
 
 const skipGpio = {
-  "motor": true,
-  "dht22": true
+  "motor": config.skipGpio.motor,
+  "dht22": config.skipGpio.dht22,
+  "sensoren": config.skipGpio.sensoren
 }
 
-if(!skipGpio.motor) {
-  var Gpio = require('onoff').Gpio;
-}
-if(!skipGpio.dht22) {
-  var sensorLib = require("node-dht-sensor");
-}
-
-const gpioPorts = {
-  in: {
-    dht22: 14,
-    oben: 21,
-    unten: 20
-  },
-  out: {
-    hoch: 26,
-    runter: 13
-  }
-};
+const gpioPorts = config.gpioPorts;
 
 klappe = {
   status: "not initialized",
-  dauer: null,
-  position: null
+  fahrDauer: null, // für wieviele Sekunden fährt die Klappe gerade
+  hochSek: null,   // wieviele Sekunden ist die Klappe hoch gefahren
+  runterSek: null, // wieviele Sekunden ist die Klappe runter gefahren
+  position: null,
+  positionNum: null,
+  zeit: null
+}
+
+function setKlappenStatus(status, fahrDauer) {
+  klappe.status = status;
+  klappe.zeit = new Date();
+  klappe.fahrDauer = fahrDauer;
+}
+
+
+// Initialisiere den Motor und die GPIO-Ports
+if(!skipGpio.motor) {
+  var Gpio = require('onoff').Gpio;
+  klappeHoch = new Gpio(gpioPorts.out.hoch, 'high');
+  klappeRunter = new Gpio(gpioPorts.out.runter, 'high');
+}
+stoppeMotor();
+addLog("Motor initialisiert");
+
+if(!skipGpio.dht22) {
+  var sensorLib = require("node-dht-sensor");
+  var cpuTemp = require("pi-temperature");
 }
 
 dht22 = {
   temperature: null,
   humidity: null,
-  time: null
+  time: null,
+  intervalSec: 30
+}
+
+cpu = {
+  temperature: null,
+  error: null,
+  time: null,
+  intervalSec: 30
+}
+
+sensoren = {
+  sensorOben: {
+    value: null,
+    text: null,
+    time: null,
+    error: null
+  },
+  sensorUnten: {
+    value: null,
+    text: null,
+    time: null,
+    error: null
+  },
+  intervalSec: 30
+}
+
+// Initialisiere die Sensoren
+if(!skipGpio.sensoren) {
+  sensorOben = new Gpio(gpioPorts.in.oben, 'in');
+  sensorUnten = new Gpio(gpioPorts.in.unten, 'in');
+}
+
+function leseSensoren() {
+  if(!skipGpio.sensoren) {
+    sensorOben.read((err, value) => { // Asynchronous read
+      if (err) {
+        sensoren.sensorOben.value = null;
+        sensoren.sensorOben.text = "error";
+        
+      }
+      else {
+        sensoren.sensorOben.value = value;
+        sensoren.sensorOben.text = (value == 1 ? "nicht": "") + " betätigt";
+      }
+      sensoren.sensorOben.time = new Date();
+      addLog("leseSensoren Oben "+value);
+    });
+
+    sensorUnten.read((err, value) => { // Asynchronous read
+      if (err) {
+        sensoren.sensorUnten.value = null;
+        sensoren.sensorUnten.text = "error";
+        
+      }
+      else {
+        sensoren.sensorUnten.value = value;
+        sensoren.sensorUnten.text = (value == 1 ? "nicht": "") + " betätigt";
+      }
+      sensoren.sensorUnten.time = new Date();
+      addLog("leseSensoren Unten "+value);
+    });
+  }
+  else {
+    // Mockup-Werte
+    sensoren.sensorUnten.value = 1;
+    sensoren.sensorUnten.text = "nicht betätigt";
+    sensoren.sensorUnten.time = new Date();
+    sensoren.sensorUnten.error = "Optionaler Fehlertext";
+
+    sensoren.sensorOben.value = 0;
+    sensoren.sensorOben.text = "betätigt";
+    sensoren.sensorOben.time = new Date();
+    sensoren.sensorOben.error = "Optionaler Fehlertext";
+  }
+  setTimeout(function erneutLesen() {
+    leseSensoren();
+  }, 5 * 1000);
+}
+
+leseSensoren();
+
+function stoppeMotor() {
+  if(!skipGpio.motor) {
+    klappeHoch.writeSync(motorAus);
+    klappeRunter.writeSync(motorAus);
+  }
+  addLog("Motor gestoppt");
+  
+  setKlappenStatus("angehalten",null)
 }
 
 function sensorObenWert() {
@@ -58,9 +163,31 @@ function sensorObenWert() {
 function sensorUntenWert() {
   return "nicht gedrückt";
 }
+function setSensorMontiert(pos,boo) {
+  // Hiermit kann man setzen, ob die einzelnen Sensoren montiert sind oder nicht.
+  // Falls ein Sensor kaputt geht kann man die Sensoren-Sicherheitsnetze so umgehen.
+  if((pos == "oben" || pos == "unten") && (boo == true || boo == false)) {
+    if(pos == "oben") {
+      sensorObenMontiert = boo;
+    }
+    else {
+      sensorUntenMontiert = boo;
+    }
+    message = `Sensor ${pos} montiert: ${boo}`;
+    success = true;
+    
+  }
+  else {
+    message = `Bitte gültige Sensorposition (oben/unten) und gültigen Montage-Wert (true/false) angeben.`;
+    success = false;  
+  }
+  addLog(message);
+  return {success: success, message: message};
+}
 
 function addLog(message) {
-  console.log(message);
+  console.log("Log: "+message);
+  // !TODO wieso funktioniert dies console.log nicht?
   log.push({
     "time": new Date(),
     "log": message
@@ -72,11 +199,13 @@ console.log("pok 🐔");
 //korrigiereHoch();
 //korrigiereRunter();
 init();
-bewegungsStatus();
+
 
 
 function init() {
   addLog("Versuche zu initialisieren");
+
+  getTemp();
 
 
   // Die manuelle Initialposition ist immer wichtiger als die automatische
@@ -104,7 +233,7 @@ function init() {
 
     console.log(`Initialposition: ${initialPosition}`);
 
-    klappe.status = "initialized";
+    setKlappenStatus("angehalten",null);
     addLog("Initialisierung erfolgreich");
     return true;
   }
@@ -138,11 +267,31 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
     success: false,
     message: ""
   }
+
+  fahrtWert = null;
+  if(richtung == "hoch") {
+    fahrtWert = 1;
+  }
+  else if (richtung == "runter") {
+    fahrtWert = -1;
+  }
+  fahrtWert = fahrtWert * sekunden
+  neuePosition = klappe.positionNum + fahrtWert;
   
 
-  if(richtung != "hoch" && richtung != "runter") {
+  if(klappe.status != "angehalten") {
+    response.success = false;
+    response.message = `klappe: Die ist gar nicht angehalten`;
+    addLog(response.message);
+  }
+  else if(richtung != "hoch" && richtung != "runter") {
     response.success = false;
     response.message = `klappe: Keine gültige Richtung angebeben (hoch/runter)`;
+    addLog(response.message);
+  }
+  else if (!initialisiert && sekunden > korrekturSekunden) {
+    response.success = false;
+    response.message = `klappe ${richtung}: ${sekunden}s geht nicht. Noch nicht kalibriert`;
     addLog(response.message);
   }
   else if (sekunden > maxSekundenEinWeg) {
@@ -150,58 +299,53 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
     response.message = `klappe ${richtung}: ${sekunden}s ist zu lang, maximal ${maxSekundenEinWeg}s erlaubt`;
     addLog(response.message);
   }
-  else if (!initialisiert && sekunden > korrekturSekunden) {
-    response.success = false;
-    response.message = `klappe ${richtung}: ${sekunden}s geht nicht. Noch nicht initialisiert`;
-    addLog(response.message);
-  }
   else if ((!initialisiert && sekunden <= korrekturSekunden) || initialisiert) {
-    // Klappe für x Sekunden
-    response.success = true;
-    response.message = `klappe ${richtung}: für ${sekunden}s ${korrektur ? '(korrektur)' : ''}`;
-    addLog(response.message);
 
-    const motorAus = 1;
-    const motorEin = 0;
 
-    if(richtung == "hoch") {
-      if(!skipGpio.motor) {
-        klappe = new Gpio(gpioPorts.out.hoch, 'high');
-      }
-    }
-    else if (richtung == "runter") {
-      if(!skipGpio.motor) {
-        klappe = new Gpio(gpioPorts.out.runter, 'high');
-      }
-    }
+    // Überprüfe ob die Fahrt zulässig ist (nicht zu weit hoch/runter)
+    // klappe.hochSek
+    // klappe.runterSek
+    
+    if(Math.abs(neuePosition) > ganzeFahrtSek) {
+      response.message = `HALLO FALSCH DA REISST DER FADEN! klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`;
+      addLog(response.message);
+      response.success = false;
+    } else {
+      addLog(`klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`);
 
-    // Starte den Motor jetzt.
-    if(!skipGpio.motor) {
-      klappe.writeSync(motorEin);
-    }
-    klappe.status = "fahre"+richtung;
-    klappe.dauer = sekunden;
+      // Klappe für x Sekunden
+      response.success = true;
+      response.message = `klappe ${richtung}: für ${sekunden}s ${korrektur ? '(korrektur)' : ''}`;
+      addLog(response.message);
 
-    // Motor später wieder abschalten
-    setTimeout(function motorSpaeterAnhalten() {
-      
-      if(!skipGpio.motor) {
-        klappe.writeSync(motorAus);
-      }
-      addLog("Halte Motor wieder an.");
-      klappe.status = "angehalten";
-      klappe.dauer = null;
-
-      // Merke wieviel hoch/runter gefahren
+      // Starte den Motor jetzt.
       if(richtung == "hoch") {
-        hochSek += sekunden;
+        if(!skipGpio.motor) {
+          klappeHoch.writeSync(motorEin);
+        }
       }
-      else if(richtung == "runter") {
-        runterSek += sekunden;
+      else if (richtung == "runter") {
+        if(!skipGpio.motor) {
+          klappeRunter.writeSync(motorEin);
+        }
       }
+      setKlappenStatus("fahre"+richtung, sekunden);
 
-    }, sekunden * 1000);
+      // Motor später wieder abschalten
+      setTimeout(function motorSpaeterAnhalten() {
+        stoppeMotor();
 
+        // Merke wieviel hoch/runter gefahren
+        if(richtung == "hoch") {
+          klappe.hochSek += sekunden;
+        }
+        else if(richtung == "runter") {
+          klappe.runterSek += sekunden;
+        }
+        klappe.positionNum += fahrtWert;
+
+      }, sekunden * 1000);
+    }
   }
   else {
     response.message = `klappe ${richtung}: ${sekunden} geht nicht. Grund nicht erkennbar.`;
@@ -212,64 +356,90 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
   return response;
 }
 
-function bewegungsStatus() {
-  let status = {
-    hochSek: hochSek,
-    runterSek: runterSek,
-    summe: hochSek - runterSek
-  }
-  return status;
+function bewegungSumme() {
+  return klappe.hochSek - klappe.runterSek;
 }
 
 function getTemp() {
+  /* Diese Funktion wird von init() das erste mal aufgerufen
+     und plant sich danach alle x Sekunden selbst ein. Sie fragt
+     die Sensorwerte vom dht22-Sensor ab und legt sie zentral ab.
+     So wird vermieden dass der Sensorwert zu oft abgefragt werden muss.
+  */
+  addLog("getTemp()");
   if(!skipGpio.dht22) {
-    return sensor.readSync(22, 14);
+    // DHT22 Temperature
+    sensorLib.read(22, 14, function(err, temperature, humidity) {
+      dht22.time = new Date();
+      if (!err) {
+        dht22.temperature = temperature;
+        dht22.humidity = humidity;
+        dht22.error = null;
+        addLog(`temp: ${temperature}°C, humidity: ${humidity}%`);
+      }
+      else {
+        addLog("DHT22 Error "+err);
+        dht22.temperature = null;
+        dht22.humidity = null;
+        dht22.error = ""+err;
+        console.log(err);
+      }
+
+    });
+
+    // CPU Temperature
+    cpuTemp.measure(function(err, temp) {
+      if (err) {
+        addLog("CPU Temperatur Error "+err);
+        cpu.error = err;
+      }
+      else {
+        cpu.error = null;
+        cpu.temperature = temp;
+        cpu.time = new Date();
+        addLog(`cpu: ${temp}°C`);
+      }
+    });
   }
-  dht22.temperature = 22;
-  dht22.humidity = 5;
-  dht22.time = new Date();
-  return true;
+  else {
+    dht22.time = new Date();
+    dht22.error = "Optional wird ein Fehler angezeigt";
+    dht22.temperature = 22;
+    dht22.humidity = 5;
+    console.log(`${dht22.time} temp: ${dht22.temperature}°C, humidity: ${dht22.humidity}%`);
+  }
+  setTimeout(function temperaturErneutLesen() {
+    getTemp();
+  }, dht22.intervalSec * 1000);
+}
 
-  /*
-  sensorLib.read(22, 14, function(err, temperature, humidity) {
-    if (!err) {
-      console.log(`temp: ${temperature}°C, humidity: ${humidity}%`);
+function kalibriere(obenUnten) {
+  /* Wenn die Klappe entweder ganz oben oder ganz unten ist,
+     wird diese Funktion aufgerufen, um diese Klappenposition
+     zu merken.
+  */
 
-
-      status = {
-        "klappe": {
-          "position": 10,
-          "oben": false,
-          "unten": true
-        },
-        "sensoren": {
-          "oben": sensorOben,
-          "unten": sensorUnten
-        },
-        "temperatur": temperature,
-        "luftfeuchtigkeit": humidity
-      };
-    
-    
-    
-      res.send(status);
-
-
-    }
-    else {
-      console.log("Fehler");
-    }
-  });*/
-
-
+  if(obenUnten != "oben" && obenUnten != "unten") {
+    return {success: false, message: "Bitte Position (oben/unten) korrekt angeben"};
+  }
+  klappe.position = obenUnten;
+  klappe.positionNum = (obenUnten == "oben" ? 1 : -1) * ganzeFahrtSek;
+  klappe.hochSek = 0;
+  klappe.runterSek = 0;
+  setKlappenStatus("angehalten", null);
+  initialisiert = true;
+  let message = `Position ${klappe.position} kalibriert.`;
+  addLog(message);
+  return {success: true, message: message};
 }
 
 // Hier kommt nun der ganze Server-Kram
 app.get('/', function (req, res) {
   res.send('Hello 🐔!');
+  console.log("Serving /");
 });
 app.get('/status', function (req, res) {
-  getTemp();
+  console.log("Serving /status");
   res.send({
     klappe: klappe,
     initialisiert: initialisiert,
@@ -281,34 +451,67 @@ app.get('/status', function (req, res) {
     korrekturSekunden: korrekturSekunden,
     skipGpio: skipGpio,
     log: log,
-    bewegungsStatus: bewegungsStatus(),
-    dht22: dht22
+    bewegungSumme: bewegungSumme(),
+    dht22: dht22,
+    cpu: cpu,
+    sensoren: sensoren
   });
 });
+app.get('/korrigiere/hoch', function (req, res) {
+  console.log("Serving /korrigiere/hoch");
+  action = korrigiereHoch();
+  res.send(action);
+});
+app.get('/korrigiere/runter', function (req, res) {
+  console.log("Serving /korrigiere/runter");
+  action = korrigiereRunter();
+  res.send(action);
+});
+app.get('/kalibriere/:obenUnten', function (req, res) {
+  console.log("Serving /kalibriere/"+req.params.obenUnten);
+  action = kalibriere(req.params.obenUnten);
+  res.send(action);
+});
 app.get('/hoch', function (req, res) {
-  action = klappeFahren("hoch",10);
+  console.log("Serving /hoch");
+  action = klappeFahren("hoch",ganzeFahrtSek);
   if(action.success != true) {
     res.status(403);
   }
   res.send(action);
 });
-app.get('/korrigiere/hoch', function (req, res) {
-  action = korrigiereHoch();
+app.get('/runter', function (req, res) {
+  console.log("Serving /runter");
+  action = klappeFahren("runter",ganzeFahrtSek);
+  if(action.success != true) {
+    res.status(403);
+  }
   res.send(action);
-});
-app.get('/korrigiere/runter', function (req, res) {
-  action = korrigiereRunter();
-  res.send(action);
-});
-app.get('/kalibriere/oben', function (req, res) {
-  // !TODO
-  //res.send('🐔 fahre jetzt hoch!');
-  //korrigiereHoch();
 });
 app.get('/hoch/:wielange', function (req, res) {
-  let dauer = parseFloat(req.params.wielange);
-  res.send(`🐔 fahre jetzt ${dauer} hoch!`);
-  klappeFahren("hoch",dauer);
+  console.log("Serving /hoch/"+req.params.wielange);
+  action = klappeFahren("hoch",parseFloat(req.params.wielange));
+  if(action.success != true) {
+    res.status(403);
+  }
+  res.send(action);
+});
+app.get('/runter/:wielange', function (req, res) {
+  console.log("Serving /runter/"+req.params.wielange);
+  action = klappeFahren("runter",parseFloat(req.params.wielange));
+  if(action.success != true) {
+    res.status(403);
+  }
+  res.send(action);
+});
+app.get('/reset', function (req, res) {
+  console.log("Serving /reset/");
+  
+    var data = fs.readFileSync('test.json', 'utf-8');
+    var newValue = new Date();
+    fs.writeFileSync('test.json', newValue, 'utf-8');
+    console.log('readFileSync complete');
+  res.send(action);
 });
 app.listen(3000, function () {
   console.log('listening on port 3000!');
