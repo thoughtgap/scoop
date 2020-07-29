@@ -3,6 +3,9 @@
 var express = require('express');
 var app = express();
 const fs = require('fs');
+const { PerformanceObserver, performance } = require('perf_hooks');
+
+var t0 = performance.now();
 
 var initialisiert = false;
 
@@ -38,13 +41,26 @@ klappe = {
   runterSek: null, // wieviele Sekunden ist die Klappe runter gefahren
   position: null,
   positionNum: null,
-  zeit: null
+  zeit: null,
+  perf: performance.now()
 }
 
 function setKlappenStatus(status, fahrDauer) {
+  // Merke alte Werte
+  klappe.previous = {
+    status: klappe.status,
+    zeit: klappe.zeit,
+    fahrDauer: klappe.fahrDauer,
+    perf: klappe.perf
+  }
+
   klappe.status = status;
   klappe.zeit = new Date();
   klappe.fahrDauer = fahrDauer;
+  klappe.perf = performance.now();
+
+  klappe.duration = klappe.perf - klappe.previous.perf;
+  addLog("Klappenstatus "+ status + " nach "+ (klappe.duration / 1000) + "s - Fahrdauer "+ klappe.previous.fahrDauer + " - jetzt "+fahrDauer+"s");
 }
 
 
@@ -53,6 +69,8 @@ if(!skipGpio.motor) {
   var Gpio = require('onoff').Gpio;
   klappeHoch = new Gpio(gpioPorts.out.hoch, 'high');
   klappeRunter = new Gpio(gpioPorts.out.runter, 'high');
+  var t1 = performance.now();
+  console.log("Motor init took " + (t1 - t0) + " milliseconds.")
 }
 stoppeMotor();
 addLog("Motor initialisiert");
@@ -66,14 +84,14 @@ dht22 = {
   temperature: null,
   humidity: null,
   time: null,
-  intervalSec: 30
+  intervalSec: config.intervals.dht22
 }
 
 cpu = {
   temperature: null,
   error: null,
   time: null,
-  intervalSec: 30
+  intervalSec: config.intervals.cpu
 }
 
 sensoren = {
@@ -89,43 +107,100 @@ sensoren = {
     time: null,
     error: null
   },
-  intervalSec: 30
+  intervalSec: config.intervals.sensoren
 }
+
+// Free up gpio ports
+// process.on('SIGINT', _ => {
+//   if(!skipGpio.sensoren) {
+//     console.log("Sensoren freigegeben");
+//     sensorOben.unexport();
+//     sensorUnten.unexport();
+//   }
+//   if(!skipGpio.motor) {
+//     console.log("Motor freigegeben");
+//     klappeHoch.unexport();
+//     klappeRunter.unexport();
+//   }
+// });
 
 // Initialisiere die Sensoren
 if(!skipGpio.sensoren) {
-  sensorOben = new Gpio(gpioPorts.in.oben, 'in');
-  sensorUnten = new Gpio(gpioPorts.in.unten, 'in');
+  sensorOben = new Gpio(gpioPorts.in.oben, 'in', 'both', {debounceTimeout: 10});
+  sensorUnten = new Gpio(gpioPorts.in.unten, 'in', 'both', {debounceTimeout: 10});
+
+  sensorOben.watch((err, value) => {
+    sensorPressed("oben",value);
+    //addLog("sensorOben: " + value + sensorOben.readSync());
+  });
+  
+  sensorUnten.watch((err, value) => {
+    sensorPressed("unten",value);
+    //addLog("sensorUnen: "+value + sensorUnten.readSync());
+  });
+}
+
+function sensorPressed(position,value) {
+  addLog("sensorPressed: "+position+ " " + (value == 1 ? "losgelassen" : "gedrückt") + "(" + value + ")");
+
+  if(position == "oben") {
+    sensorObenWert(value,null);
+  }
+  else {
+    sensorUntenWert(value,null);
+  }
+}
+
+function sensorObenWert(value,err) {
+  if (err) {
+    sensoren.sensorOben.value = null;
+    sensoren.sensorOben.text = "error";
+    
+  }
+  else {
+    sensoren.sensorOben.value = value;
+    sensoren.sensorOben.text = (value == 1 ? "nicht": "") + " betätigt";
+
+    
+    // Wenn der Motor gerade hoch fährt,
+    // und der Sensor betätigt wird, halte den Motor an.
+    if(value == 0) {
+      stoppeMotor();
+    }
+
+
+  }
+  sensoren.sensorOben.time = new Date();
+  addLog("leseSensoren Oben "+value);
+}
+function sensorUntenWert(value,err) {
+  if (err) {
+    sensoren.sensorUnten.value = null;
+    sensoren.sensorUnten.text = "error";
+    
+  }
+  else {
+    sensoren.sensorUnten.value = value;
+    sensoren.sensorUnten.text = (value == 1 ? "nicht": "") + " betätigt";
+
+    // Wenn der Motor gerade runter fährt,
+    // und der Sensor betätigt wird, halte den Motor an.
+    if(value == 0) {
+      stoppeMotor();
+    }
+  }
+  sensoren.sensorUnten.time = new Date();
+  addLog("leseSensoren Unten "+value);
 }
 
 function leseSensoren() {
   if(!skipGpio.sensoren) {
     sensorOben.read((err, value) => { // Asynchronous read
-      if (err) {
-        sensoren.sensorOben.value = null;
-        sensoren.sensorOben.text = "error";
-        
-      }
-      else {
-        sensoren.sensorOben.value = value;
-        sensoren.sensorOben.text = (value == 1 ? "nicht": "") + " betätigt";
-      }
-      sensoren.sensorOben.time = new Date();
-      addLog("leseSensoren Oben "+value);
+      sensorObenWert(value, err);
     });
 
     sensorUnten.read((err, value) => { // Asynchronous read
-      if (err) {
-        sensoren.sensorUnten.value = null;
-        sensoren.sensorUnten.text = "error";
-        
-      }
-      else {
-        sensoren.sensorUnten.value = value;
-        sensoren.sensorUnten.text = (value == 1 ? "nicht": "") + " betätigt";
-      }
-      sensoren.sensorUnten.time = new Date();
-      addLog("leseSensoren Unten "+value);
+      sensorUntenWert(value, err);
     });
   }
   else {
@@ -140,11 +215,12 @@ function leseSensoren() {
     sensoren.sensorOben.time = new Date();
     sensoren.sensorOben.error = "Optionaler Fehlertext";
   }
-  setTimeout(function erneutLesen() {
-    leseSensoren();
-  }, 5 * 1000);
+  if(sensoren.intervalSec) {
+    setTimeout(function erneutLesen() {
+      leseSensoren();
+    }, sensoren.intervalSec * 1000);
+  }
 }
-
 leseSensoren();
 
 function stoppeMotor() {
@@ -157,13 +233,8 @@ function stoppeMotor() {
   setKlappenStatus("angehalten",null)
 }
 
-function sensorObenWert() {
-  return "nicht gedrückt";
-}
-function sensorUntenWert() {
-  return "nicht gedrückt";
-}
 function setSensorMontiert(pos,boo) {
+  // !TODO
   // Hiermit kann man setzen, ob die einzelnen Sensoren montiert sind oder nicht.
   // Falls ein Sensor kaputt geht kann man die Sensoren-Sicherheitsnetze so umgehen.
   if((pos == "oben" || pos == "unten") && (boo == true || boo == false)) {
@@ -186,8 +257,7 @@ function setSensorMontiert(pos,boo) {
 }
 
 function addLog(message) {
-  console.log("Log: "+message);
-  // !TODO wieso funktioniert dies console.log nicht?
+  console.log(new Date() + "Log: "+message);
   log.push({
     "time": new Date(),
     "log": message
@@ -195,12 +265,7 @@ function addLog(message) {
 }
 
 console.log("pok 🐔");
-//manuelleInitialPosition("oben");
-//korrigiereHoch();
-//korrigiereRunter();
 init();
-
-
 
 function init() {
   addLog("Versuche zu initialisieren");
@@ -255,10 +320,12 @@ function manuelleInitialPosition(pos) {
 
 function korrigiereHoch() {
   addLog("Korrigiere hoch");
+  // TODO Akzeptiert er nicht mehr, weil die neue Position out of bounds wäre.
   return klappeFahren("hoch",korrekturSekunden,true);
 }
 function korrigiereRunter() {
   addLog("Korrigiere runter");
+  // TODO Akzeptiert er nicht mehr, weil die neue Position out of bounds wäre.
   return klappeFahren("runter",korrekturSekunden,true);
 }
 
@@ -306,7 +373,7 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
     // klappe.hochSek
     // klappe.runterSek
     
-    if(Math.abs(neuePosition) > ganzeFahrtSek) {
+    if(Math.abs(neuePosition) > ganzeFahrtSek || neuePosition < 0 || neuePosition > ganzeFahrtSek) {
       response.message = `HALLO FALSCH DA REISST DER FADEN! klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`;
       addLog(response.message);
       response.success = false;
@@ -343,6 +410,22 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
           klappe.runterSek += sekunden;
         }
         klappe.positionNum += fahrtWert;
+
+        console.log({
+          sekunden: sekunden,
+          ganzeFahrtSek: ganzeFahrtSek,
+          positionNum: klappe.positionNum,
+          richtung: richtung,
+          bool: (sekunden >= ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == ganzeFahrtSek)
+        });
+        if(sekunden >= ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == ganzeFahrtSek) {
+          if(richtung == "hoch") {
+            klappe.position = "oben";
+          }
+          else {
+            klappe.position = "unten";
+          }
+        }
 
       }, sekunden * 1000);
     }
@@ -382,23 +465,8 @@ function getTemp() {
         dht22.temperature = null;
         dht22.humidity = null;
         dht22.error = ""+err;
-        console.log(err);
       }
 
-    });
-
-    // CPU Temperature
-    cpuTemp.measure(function(err, temp) {
-      if (err) {
-        addLog("CPU Temperatur Error "+err);
-        cpu.error = err;
-      }
-      else {
-        cpu.error = null;
-        cpu.temperature = temp;
-        cpu.time = new Date();
-        addLog(`cpu: ${temp}°C`);
-      }
     });
   }
   else {
@@ -408,9 +476,32 @@ function getTemp() {
     dht22.humidity = 5;
     console.log(`${dht22.time} temp: ${dht22.temperature}°C, humidity: ${dht22.humidity}%`);
   }
-  setTimeout(function temperaturErneutLesen() {
-    getTemp();
-  }, dht22.intervalSec * 1000);
+  if(dht22.intervalSec) {
+    setTimeout(function temperaturErneutLesen() {
+      getTemp();
+    }, dht22.intervalSec * 1000);
+  }
+}
+
+function getCpuTemp() {
+  // CPU Temperature
+  cpuTemp.measure(function(err, temp) {
+    if (err) {
+      addLog("CPU Temperatur Error "+err);
+      cpu.error = err;
+    }
+    else {
+      cpu.error = null;
+      cpu.temperature = temp;
+      cpu.time = new Date();
+      addLog(`cpu: ${temp}°C`);
+    }
+    if(cpu.intervalSec) {
+      setTimeout(function temperaturErneutLesen() {
+        getTemp();
+      }, cpu.intervalSec * 1000);
+    }
+  });
 }
 
 function kalibriere(obenUnten) {
@@ -423,7 +514,7 @@ function kalibriere(obenUnten) {
     return {success: false, message: "Bitte Position (oben/unten) korrekt angeben"};
   }
   klappe.position = obenUnten;
-  klappe.positionNum = (obenUnten == "oben" ? 1 : -1) * ganzeFahrtSek;
+  klappe.positionNum = (obenUnten == "oben" ? 1 : 0) * ganzeFahrtSek;
   klappe.hochSek = 0;
   klappe.runterSek = 0;
   setKlappenStatus("angehalten", null);
@@ -432,6 +523,41 @@ function kalibriere(obenUnten) {
   addLog(message);
   return {success: true, message: message};
 }
+
+camera = {
+  image: null,
+  time: null,
+  intervalSec: 30,
+  maxAgeSec: 300,
+  timeNextImage: null,
+  busy: false
+};
+
+const Raspistill = require('node-raspistill').Raspistill;
+const cam = new Raspistill();
+function takePhoto(force = false) {
+  let now = new Date();
+  let max = camera.timeNextImage;
+  console.log(now, max);
+  if(now > max && !camera.busy) {
+    camera.busy = true;
+    addLog("Taking a picture");
+    cam.takePhoto().then((photo) => {
+      camera.image = photo;
+      camera.time = new Date();
+      camera.timeNextImage = new Date();
+      camera.timeNextImage.setSeconds(camera.timeNextImage.getSeconds() + camera.maxAgeSec);
+      camera.busy = false;
+      addLog("Took a picture");
+    });
+  }
+  else {
+    addLog("Not taking a picture");
+  }
+}
+takePhoto();
+
+
 
 // Hier kommt nun der ganze Server-Kram
 app.get('/', function (req, res) {
@@ -450,11 +576,17 @@ app.get('/status', function (req, res) {
     maxSekundenEinWeg: maxSekundenEinWeg,
     korrekturSekunden: korrekturSekunden,
     skipGpio: skipGpio,
-    log: log,
+    log: log.slice(1).slice(-50),
     bewegungSumme: bewegungSumme(),
     dht22: dht22,
     cpu: cpu,
     sensoren: sensoren
+  });
+});
+app.get('/log', function (req, res) {
+  console.log("Serving /log");
+  res.send({
+    log: log
   });
 });
 app.get('/korrigiere/hoch', function (req, res) {
@@ -512,6 +644,23 @@ app.get('/reset', function (req, res) {
     fs.writeFileSync('test.json', newValue, 'utf-8');
     console.log('readFileSync complete');
   res.send(action);
+});
+app.get('/cam', function (req, res) {
+  console.log("Serving /cam/");
+  
+  takePhoto();
+  if(camera.image) {
+    res.contentType('image/jpeg');
+    res.send(camera.image);
+  }
+  else {
+    res.send({message:"geht nicht"});
+  }
+});
+app.get('/cam/new', function (req, res) {
+  console.log("Serving /cam/new");
+  takePhoto(true);
+  res.send({message:"foto in auftrag gegeben. abholen unter /cam"});
 });
 app.listen(3000, function () {
   console.log('listening on port 3000!');
