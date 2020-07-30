@@ -52,7 +52,7 @@ function setKlappenStatus(status, fahrDauer) {
     status: klappe.status,
     zeit: klappe.zeit,
     fahrDauer: klappe.fahrDauer,
-    perf: klappe.perf
+    perf: klappe.perf,
   }
 
   klappe.status = status;
@@ -272,7 +272,7 @@ init();
 
 function init() {
   addLog("Versuche zu initialisieren");
-
+  getCpuTemp();
   getTemp();
 
 
