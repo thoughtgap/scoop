@@ -4,6 +4,7 @@ var express = require('express');
 var app = express();
 const fs = require('fs');
 const { PerformanceObserver, performance } = require('perf_hooks');
+var moment = require('moment');
 
 var t0 = performance.now();
 
@@ -257,9 +258,11 @@ function setSensorMontiert(pos,boo) {
 }
 
 function addLog(message) {
-  console.log(new Date() + "Log: "+message);
+  let timestamp = moment();
+
+  console.log(timestamp.format('YYYY-MM-D H:mm:ss') + ": "+message);
   log.push({
-    "time": new Date(),
+    "time": timestamp,
     "log": message
   });
 }
