@@ -35,6 +35,13 @@ const skipGpio = {
 
 const gpioPorts = config.gpioPorts;
 
+var gpioMotor = require('./gpio-motor.js');
+gpioMotor.configure( config.gpioPorts.out.hoch,
+                config.gpioPorts.out.runter,
+                config.motorAus,
+                config.motorEin,
+                skipGpio.motor);
+
 var logging = require('./logging.js');
 logging.add("Testlog");
 
@@ -74,10 +81,6 @@ function setKlappenStatus(status, fahrDauer) {
 // Initialisiere den Motor und die GPIO-Ports
 if(!skipGpio.motor) {
   var Gpio = require('onoff').Gpio;
-  klappeHoch = new Gpio(gpioPorts.out.hoch, 'high');
-  klappeRunter = new Gpio(gpioPorts.out.runter, 'high');
-  var t1 = performance.now();
-  console.log("Motor init took " + (t1 - t0) + " milliseconds.")
 }
 stoppeMotor();
 addLog("Motor initialisiert");
@@ -231,12 +234,7 @@ function leseSensoren() {
 leseSensoren();
 
 function stoppeMotor() {
-  if(!skipGpio.motor) {
-    klappeHoch.writeSync(motorAus);
-    klappeRunter.writeSync(motorAus);
-  }
-  addLog("Motor gestoppt");
-  
+  gpioMotor.stoppeMotor();
   setKlappenStatus("angehalten",null)
 }
 
@@ -397,12 +395,12 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
       // Starte den Motor jetzt.
       if(richtung == "hoch") {
         if(!skipGpio.motor) {
-          klappeHoch.writeSync(motorEin);
+          gpioMotor.fahreHoch();
         }
       }
       else if (richtung == "runter") {
         if(!skipGpio.motor) {
-          klappeRunter.writeSync(motorEin);
+          gpioMotor.fahreRunter();
         }
       }
       setKlappenStatus("fahre"+richtung, sekunden);
