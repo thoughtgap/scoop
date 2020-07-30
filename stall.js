@@ -537,7 +537,10 @@ camera = {
 };
 
 const Raspistill = require('node-raspistill').Raspistill;
-const cam = new Raspistill();
+const cam = new Raspistill({
+  noFileSave: true,
+  encoding: 'jpg'
+});
 function takePhoto(force = false) {
   let now = new Date();
   let max = camera.timeNextImage;
