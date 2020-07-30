@@ -35,6 +35,12 @@ const skipGpio = {
 
 const gpioPorts = config.gpioPorts;
 
+var logging = require('./logging.js');
+logging.add("Testlog");
+
+
+
+
 klappe = {
   status: "not initialized",
   fahrDauer: null, // für wieviele Sekunden fährt die Klappe gerade
