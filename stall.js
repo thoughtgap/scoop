@@ -6,6 +6,8 @@ const fs = require('fs');
 const { PerformanceObserver, performance } = require('perf_hooks');
 var moment = require('moment');
 
+var logging = require('./logging.js');
+
 var t0 = performance.now();
 
 var initialisiert = false;
@@ -261,14 +263,15 @@ function setSensorMontiert(pos,boo) {
   return {success: success, message: message};
 }
 
-function addLog(message) {
-  let timestamp = moment();
+function addLog(message, type="info") {
+  logging.add(message, type);
+  // let timestamp = moment();
 
-  console.log(timestamp.format('YYYY-MM-D H:mm:ss') + ": "+message);
-  log.push({
-    "time": timestamp,
-    "log": message
-  });
+  // console.log(timestamp.format('YYYY-MM-D H:mm:ss') + ": "+message);
+  // log.push({
+  //   "time": timestamp,
+  //   "log": message
+  // });
 }
 
 console.log("pok 🐔");
@@ -468,7 +471,7 @@ function getTemp() {
         addLog(`temp: ${temperature}°C, humidity: ${humidity}%`);
       }
       else {
-        addLog("DHT22 Error "+err);
+        addLog("DHT22 Error "+err,"error");
         dht22.temperature = null;
         dht22.humidity = null;
         dht22.error = ""+err;
@@ -673,5 +676,5 @@ app.get('/cam/new', function (req, res) {
   res.send({message:"foto in auftrag gegeben. abholen unter /cam"});
 });
 app.listen(3000, function () {
-  console.log('listening on port 3000!');
+  logging.add('listening on port 3000!');
 });
