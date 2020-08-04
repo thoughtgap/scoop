@@ -534,42 +534,7 @@ function kalibriere(obenUnten) {
   return {success: true, message: message};
 }
 
-camera = {
-  image: null,
-  time: null,
-  intervalSec: 30,
-  maxAgeSec: 300,
-  timeNextImage: null,
-  busy: false
-};
-
-const Raspistill = require('node-raspistill').Raspistill;
-const cam = new Raspistill({
-  noFileSave: true,
-  encoding: 'jpg'
-});
-function takePhoto(force = false) {
-  let now = new Date();
-  let max = camera.timeNextImage;
-  console.log(now, max);
-  if(now > max && !camera.busy) {
-    camera.busy = true;
-    addLog("Taking a picture");
-    cam.takePhoto().then((photo) => {
-      camera.image = photo;
-      camera.time = new Date();
-      camera.timeNextImage = new Date();
-      camera.timeNextImage.setSeconds(camera.timeNextImage.getSeconds() + camera.maxAgeSec);
-      camera.busy = false;
-      addLog("Took a picture");
-    });
-  }
-  else {
-    addLog("Not taking a picture");
-  }
-}
-takePhoto();
-
+var camera = require('./camera.js');
 
 
 // Hier kommt nun der ganze Server-Kram
@@ -593,7 +558,15 @@ app.get('/status', function (req, res) {
     bewegungSumme: bewegungSumme(),
     dht22: dht22,
     cpu: cpu,
-    sensoren: sensoren
+    sensoren: sensoren,
+    camera: {
+      image: 'http://192.168.31.21/cam',
+      time: camera.data.time,
+      intervalSec: camera.data.intervalSec,
+      maxAgeSec: camera.data.maxAgeSec,
+      timeNextImage: camera.data.timeNextImage,
+      busy: camera.data.busy
+    }
   });
 });
 app.get('/log', function (req, res) {
@@ -658,22 +631,27 @@ app.get('/reset', function (req, res) {
     console.log('readFileSync complete');
   res.send(action);
 });
-app.get('/cam', function (req, res) {
+app.get('/cam/new', function (req, res) {
+  console.log("Serving /cam/new");
+  camera.takePhoto(true);
+  res.send({message:"foto in auftrag gegeben. abholen unter /cam"});
+});
+app.get('/cam/:timestamp?', function (req, res) {
   console.log("Serving /cam/");
   
-  takePhoto();
-  if(camera.image) {
+  if(camera.getJpg()) {
     res.contentType('image/jpeg');
-    res.send(camera.image);
+    res.send(camera.getJpg());
   }
   else {
     res.send({message:"geht nicht"});
   }
 });
-app.get('/cam/new', function (req, res) {
-  console.log("Serving /cam/new");
-  takePhoto(true);
-  res.send({message:"foto in auftrag gegeben. abholen unter /cam"});
+app.get('/camsvg/', function (req, res) {
+  console.log("Serving /camsvg/");
+  
+    res.contentType('image/svg+xml');
+    res.send(camera.getSvg());
 });
 app.listen(3000, function () {
   logging.add('listening on port 3000!');
