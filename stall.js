@@ -538,6 +538,11 @@ var camera = require('./camera.js');
 
 
 // Hier kommt nun der ganze Server-Kram
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
 app.get('/', function (req, res) {
   res.send('Hello 🐔!');
   console.log("Serving /");
@@ -649,7 +654,7 @@ app.get('/cam/:timestamp?', function (req, res) {
 });
 app.get('/camsvg/', function (req, res) {
   console.log("Serving /camsvg/");
-  
+
     res.contentType('image/svg+xml');
     res.send(camera.getSvg());
 });
