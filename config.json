@@ -31,5 +31,6 @@
     "cpu": 30,
     "sensoren": 1,
     "bme280": 60
-  }
+  },
+  "thingspeakAPI": "XXXXXXXX"
 }
