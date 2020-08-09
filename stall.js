@@ -25,6 +25,7 @@ const sensorUntenMontiert = config.sensorUntenMontiert;
 const ganzeFahrtSek = config.ganzeFahrtSek;
 const maxSekundenEinWeg = config.maxSekundenEinWeg;
 const korrekturSekunden = config.korrekturSekunden;
+logging.thingspeakSetAPIKey(config.thingspeakAPI);
 
 const motorAus = config.motorAus;
 const motorEin = config.motorEin;
@@ -32,7 +33,8 @@ const motorEin = config.motorEin;
 const skipGpio = {
   "motor": config.skipGpio.motor,
   "dht22": config.skipGpio.dht22,
-  "sensoren": config.skipGpio.sensoren
+  "sensoren": config.skipGpio.sensoren,
+  "bme280": config.skipGpio.bme280
 }
 
 const gpioPorts = config.gpioPorts;
@@ -46,6 +48,18 @@ gpioMotor.configure( config.gpioPorts.out.hoch,
 
 var logging = require('./logging.js');
 logging.add("Testlog");
+
+if(!skipGpio.bme280) {
+  addLog("Initializing BME280 Temperature Sensor");
+  var bme280 = require('./bme280.js');
+  const intervalreadSec = 30;
+  bme280.configure(config.gpioPorts.out.bme280, config.intervals.bme280);
+  addLog("CONFIG BME");
+  bme280.readSensor();
+}
+else {
+  addLog("Skipping BME280 Temperature Sensor");
+}
 
 
 
@@ -81,14 +95,16 @@ function setKlappenStatus(status, fahrDauer) {
 
 
 // Initialisiere den Motor und die GPIO-Ports
-if(!skipGpio.motor) {
-  var Gpio = require('onoff').Gpio;
-}
+// if(!skipGpio.motor) {
+//   var Gpio = require('onoff').Gpio;
+// }
 stoppeMotor();
 addLog("Motor initialisiert");
 
 if(!skipGpio.dht22) {
   var sensorLib = require("node-dht-sensor");
+}
+if(!skipGpio.cpuTemp) {
   var cpuTemp = require("pi-temperature");
 }
 
@@ -505,10 +521,11 @@ function getCpuTemp() {
       cpu.temperature = temp;
       cpu.time = new Date();
       addLog(`cpu: ${temp}°C`);
+      logging.thingspeakLog("field4="+cpu.temperature);
     }
     if(cpu.intervalSec) {
       setTimeout(function temperaturErneutLesen() {
-        getTemp();
+        getCpuTemp();
       }, cpu.intervalSec * 1000);
     }
   });
@@ -543,10 +560,27 @@ app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
+//app.use('/frontend', express.static('frontend'));
+
 app.get('/', function (req, res) {
   res.send('Hello 🐔!');
   console.log("Serving /");
 });
+
+app.get('/frontend/index.html', function (req, res) {
+  console.log("Serving /frontend/index.html");
+  res.sendFile(__dirname + '/frontend/index.html');
+});
+app.get('/frontend/coop.js', function (req, res) {
+  console.log("Serving /frontend/coop.js");
+  res.sendFile(__dirname + '/frontend/coop.js');
+});
+app.get('/frontend/chick.svg', function (req, res) {
+  console.log("Serving /frontend/chick.svg");
+  res.sendFile(__dirname + '/frontend/chick.svg');
+});
+
+
 app.get('/status', function (req, res) {
   console.log("Serving /status");
   res.send({
@@ -559,7 +593,8 @@ app.get('/status', function (req, res) {
     maxSekundenEinWeg: maxSekundenEinWeg,
     korrekturSekunden: korrekturSekunden,
     skipGpio: skipGpio,
-    log: log.slice(1).slice(-50),
+    //log: log.slice(1).slice(-50),
+    bme280: bme280.status,
     bewegungSumme: bewegungSumme(),
     dht22: dht22,
     cpu: cpu,
@@ -652,7 +687,7 @@ app.get('/cam/:timestamp?', function (req, res) {
     res.send({message:"geht nicht"});
   }
 });
-app.get('/camsvg/', function (req, res) {
+app.get('/camsvg/:timestamp?', function (req, res) {
   console.log("Serving /camsvg/");
 
     res.contentType('image/svg+xml');

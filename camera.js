@@ -5,9 +5,10 @@ var camera = {
     image: null,
     time: null,
     intervalSec: 30,
-    maxAgeSec: 20,
+    maxAgeSec: 10,
     timeNextImage: null,
-    busy: false
+    busy: false,
+    lastRequest: null
 };
 
 var cameraConfig = {
@@ -48,12 +49,24 @@ takePhoto = (force = false) => {
         camera.busy = true;
         logging.add("Taking a picture");
         cam.takePhoto().then((photo) => {
-        camera.image = photo;
-        camera.time = new Date();
-        camera.timeNextImage = new Date();
-        camera.timeNextImage.setSeconds(camera.timeNextImage.getSeconds() + camera.maxAgeSec);
-        camera.busy = false;
-        logging.add("Took a picture");
+          camera.image = photo;
+          camera.time = new Date();
+          camera.timeNextImage = new Date();
+          camera.timeNextImage.setSeconds(camera.timeNextImage.getSeconds() + camera.maxAgeSec);
+          camera.busy = false;
+          logging.add("Took a picture");
+
+          if(camera.lastRequest) {
+            let diff = new moment().diff(camera.lastRequest);
+            console.log("Last picture is "+diff+ " old");
+      
+            if(diff < 5 * 60 * 1000) {
+              console.log("Taking another picture in 10s until "+camera.lastRequest.format() + " +5min");
+              setTimeout(function nextPicPls() {
+                takePhoto();
+              }, 10 * 1000);
+            }
+          }
         });
     }
 }
@@ -88,7 +101,7 @@ getSvg = () => {
           <g id="page">`
       if(camera.image) {
         html += '<image overflow="visible" width="1296" height="972" xlink:href="/cam/'+ moment(camera.time).format() +'.jpg"/>';
-        html += '<text font-family="Arial, Helvetica, sans-serif" x="10" y="40" fill="white" font-size="30px">🐔 '+ moment(camera.time).format("HH:mm:ss") + ' (' + moment(camera.time).fromNow() +')</text>';
+        html += '<text font-family="Arial, Helvetica, sans-serif" x="10" y="40" fill="white" font-size="30px">🐔 '+ moment(camera.time).format("HH:mm:ss") + ' (' + moment(camera.time).fromNow() +' - '+ new moment().diff(camera.time)/1000 +')</text>';
       }
       else {
         html += '<text x="10" y="500" fill="black" font-size="500px">🐔</text>';
@@ -106,16 +119,13 @@ getSvg = () => {
 }
 
 getJpg = () => {
+    camera.lastRequest = new moment();
     takePhoto();
     return camera.image;
 }
-
-
-
 
 exports.data = camera;
 exports.cameraConfig = cameraConfig;
 exports.takePhoto = takePhoto;
 exports.getSvg = getSvg;
 exports.getJpg = getJpg;
-
