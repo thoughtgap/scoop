@@ -2,13 +2,16 @@
   "skipGpio": {
     "motor": true,
     "dht22": true,
-    "sensoren": true
+    "sensoren": true,
+    "bme280": true,
+    "cputemp": true
   },
   "gpioPorts": {
     "in": {
       "dht22": 14,
       "oben": 5,
-      "unten": 6
+      "unten": 6,
+      "bme280": "0x76"
     },
     "out": {
       "hoch": 23,
@@ -26,6 +29,7 @@
     "dht22": 30,
     "dht22OnError": 300,
     "cpu": 30,
-    "sensoren": 1
+    "sensoren": 1,
+    "bme280": 60
   }
 }
