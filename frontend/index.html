@@ -1,0 +1,313 @@
+<!doctype html>
+<html ng-app="todoApp">
+
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.0/angular.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/locale/de.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-moment/1.3.0/angular-moment.min.js"></script>
+  <style>
+    /* .floaters {
+      float: left;
+      margin: 1em;
+    } */
+    /* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+    html,
+    body,
+    div,
+    span,
+    applet,
+    object,
+    iframe,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    blockquote,
+    pre,
+    a,
+    abbr,
+    acronym,
+    address,
+    big,
+    cite,
+    code,
+    del,
+    dfn,
+    em,
+    img,
+    ins,
+    kbd,
+    q,
+    s,
+    samp,
+    small,
+    strike,
+    strong,
+    sub,
+    sup,
+    tt,
+    var,
+    b,
+    u,
+    i,
+    center,
+    dl,
+    dt,
+    dd,
+    ol,
+    ul,
+    li,
+    fieldset,
+    form,
+    label,
+    legend,
+    table,
+    caption,
+    tbody,
+    tfoot,
+    thead,
+    tr,
+    th,
+    td,
+    article,
+    aside,
+    canvas,
+    details,
+    embed,
+    figure,
+    figcaption,
+    footer,
+    header,
+    hgroup,
+    menu,
+    nav,
+    output,
+    ruby,
+    section,
+    summary,
+    time,
+    mark,
+    audio,
+    video {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      font-size: 100%;
+      font: inherit;
+      vertical-align: baseline;
+    }
+
+    /* HTML5 display-role reset for older browsers */
+    article,
+    aside,
+    details,
+    figcaption,
+    figure,
+    footer,
+    header,
+    hgroup,
+    menu,
+    nav,
+    section {
+      display: block;
+    }
+
+    body {
+      line-height: 1;
+    }
+
+    ol,
+    ul {
+      list-style: none;
+    }
+
+    blockquote,
+    q {
+      quotes: none;
+    }
+
+    blockquote:before,
+    blockquote:after,
+    q:before,
+    q:after {
+      content: '';
+      content: none;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    /** Custom **/
+
+    body {
+      font-size: 16px;
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    .floaters {
+      border-top: 1px solid grey;
+      padding: 7px 15px;
+    }
+
+    h2 {
+      font-size: 56px;
+      text-align: center;
+      padding: 5px;
+    }
+
+    h3 {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    pre {
+      padding: 7px;
+      font-family: monospace;
+      font-size: 12px;
+      max-width: 100%;
+      overflow: scroll;
+      word-wrap: break-word;
+      white-space: break-spaces;
+      background-color: #efefef;
+    }
+
+    img {
+      width: 100%;
+      height: auto;
+    }
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="coop.js"></script>
+  <link rel="icon" href="chick.svg">
+</head>
+
+<body>
+  <div ng-controller="coopCtrl as coop">
+    <div class="floaters">
+      <h2>🐔 {{coopStatus.klappe.status}}<span ng-show="coopStatus.klappe.position">, {{coopStatus.klappe.position}}</span></h2>
+      <a href="/camsvg" target="_blank"><img ng-src="{{cameraUrl}}"></a>
+    </div>
+
+    <div class="floaters">
+      <h3>🕐 Status</h3>
+      <div>
+        <a href="" ng-click="getStatus()">
+          <span ng-show="!coopStatusLaedt">Neu laden</span>
+          <span ng-show="coopStatusLaedt">Lädt gerade</span>
+        </a> (zuletzt <time am-time-ago="coopStatusVonWann"></time>)<br />
+      </div>
+    </div>
+
+    <div class="floaters">
+      <h3>🎬 Klappe</h3>
+      <div>
+        Aktualisiert: <a title="{{coopStatus.klappe.zeit}}"><time am-time-ago="coopStatus.klappe.zeit"></time></a><br />
+        Status: {{coopStatus.klappe.status}}<br />
+        Position: {{coopStatus.klappe.position}}<br />
+        PositionNum: {{coopStatus.klappe.positionNum}}<br />
+        Fahrdauer: {{coopStatus.klappe.fahrDauer}}<br />
+        hochSek: {{coopStatus.klappe.hochSek}}<br />
+        runterSek: {{coopStatus.klappe.runterSek}}<br />
+
+        Vorher: {{coopStatus.klappe.previous.status}} {{coopStatus.klappe.previous.position}} <a
+          title="{{coopStatus.klappe.previous.zeit}}"><time am-time-ago="coopStatus.klappe.previous.zeit"></time></a>
+
+        <p>
+          <a href="#" ng-click="fahreKlappe('hoch')">Hoch fahren</a><br />
+        </p>
+        <p>
+          <a href="#" ng-click="fahreKlappe('runter')">Runter fahren</a><br />
+        </p>
+        <p>
+          Success: {{fahreStatus.success}}<br />
+          Message: {{fahreStatus.message}}<br />
+          <time am-time-ago="fahreStatusVonWann"></time>
+        </p>
+      </div>
+    </div>
+
+    <div class="floaters">
+      <h3>📟 Sensoren</h3>
+      <div>
+        <p>
+          Temperatur: {{coopStatus.bme280.values.temperature | number : 1}}°C<br />
+          Luftdruck: {{coopStatus.bme280.values.pressure | number : 0}}hpa<br />
+          Luftfeuchtigkeit: {{coopStatus.bme280.values.humidity | number : 0}}% <time
+            am-time-ago="coopStatus.bme280.time"></time><br />
+        </p>
+        <p>
+          CPU: {{coopStatus.cpu.temperature}}°C (<time am-time-ago="coopStatus.cpu.time"></time>)
+          (alle {{coopStatus.cpu.intervalSec}}s)
+        <p ng-show="coopStatus.cpu.error">
+          Fehler: {{coopStatus.cpu.error}}
+        </p>
+        </p>
+        <p>
+          Oben: <span ng-show="!coopStatus.sensorObenMontiert">nicht </span>montiert,
+          {{coopStatus.sensoren.sensorOben.text}} (<a title="{{coopStatus.sensoren.sensorOben.time}}"><time
+              am-time-ago="coopStatus.sensoren.sensorOben.time"></time></a>) {{coopStatus.sensoren.sensorOben.error}}
+        </p>
+        <p>
+          Unten: <span ng-show="!coopStatus.sensorUntenMontiert">nicht </span>montiert,
+          {{coopStatus.sensoren.sensorUnten.text}} (<a title="{{coopStatus.sensoren.sensorUnten.time}}"><time
+              am-time-ago="coopStatus.sensoren.sensorUnten.time"></time></a>) {{coopStatus.sensoren.sensorUnten.error}}
+        </p>
+        alle {{coopStatus.sensoren.intervalSec}}s
+      </div>
+    </div>
+
+    <div class="floaters">
+      <h3>🛠 Initialisieren</h3>
+      <p>
+        <a href="#" ng-click="klappeIst('oben')">Klappe ist jetzt oben</a><br />
+        <a href="#" ng-click="klappeIst('unten')">Klappe ist jetzt unten</a><br />
+      <p>
+        Success: {{kalibriereStatus.success}}<br />
+        Message: {{kalibriereStatus.message}}<br />
+        <time am-time-ago="kalibriereStatusVonWann"></time>
+      </p>
+      </p>
+      <p>
+
+        <a href="#" ng-click="klappeKorrigieren('hoch')">Korrigiere etwas nach oben</a><br />
+        <a href="#" ng-click="klappeKorrigieren('runter')">Korrigiere etwas nach unten</a><br />
+      <p>
+        Success: {{korrigierStatus.success}}<br />
+        Message: {{korrigierStatus.message}}<br />
+        <time am-time-ago="korrigierStatusVonWann"></time>
+      </p>
+      </p>
+    </div>
+
+    <div class="floaters">
+      <h3>🎥 Webcam</h3>
+      <p>
+        {{cameraUrl}}<br />
+        Bild von <time am-time-ago="coopStatus.camera.time"></time><br />
+
+        IntervalSec: {{coopStatus.camera.intervalSec}}<br />
+        maxAgeSec: {{coopStatus.camera.maxAgeSec}}<br />
+        busy: {{coopStatus.camera.busy}}<br />
+      </p>
+    </div>
+
+    <div class="floaters">
+      <pre>{{coopStatus}}</pre>
+    </div>
+
+  </div>
+</body>
+
+</html>
