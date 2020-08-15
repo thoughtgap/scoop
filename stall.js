@@ -659,6 +659,15 @@ app.get('/camsvg/:timestamp?', function (req, res) {
     res.contentType('image/svg+xml');
     res.send(camera.getSvg());
 });
+app.get('/heapdump', function (req, res) {
+  // For debugging memory leaks
+  logging.add(`Extracting Heap dump`);
+  const heapdump = require("heapdump");
+  heapdump.writeSnapshot((err, filename) => {
+    logging.add(`Heap dump written to ${filename}`);
+    res.send(`Heap dump written to ${filename}`);
+  });
+});
 app.listen(3000, function () {
   logging.add('listening on port 3000!');
 });
