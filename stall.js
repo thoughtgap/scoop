@@ -47,7 +47,7 @@ gpioMotor.configure( config.gpioPorts.out.hoch,
 
 if(!skipGpio.bme280) {
   logging.add("Initializing BME280 Temperature Sensor");
-  var bme280 = require('./bme280.js');
+  var bme280 = require('./temperature-bme280.js');
   const intervalreadSec = 30;
   bme280.configure(config.gpioPorts.out.bme280, config.intervals.bme280);
   logging.add("CONFIG BME");
@@ -55,6 +55,28 @@ if(!skipGpio.bme280) {
 }
 else {
   logging.add("Skipping BME280 Temperature Sensor");
+}
+
+if(!skipGpio.dht22) {
+  logging.add("Initializing DHT22 Temperature Sensor");
+  var dht22 = require('./temperature-dht22.js');
+  const intervalreadSec = 30;
+  dht22.configure(config.gpioPorts.out.dht22, config.intervals.dht22);
+  dht22.readSensor();
+}
+else {
+  logging.add("Skipping DHT22 Temperature Sensor");
+}
+
+if(!skipGpio.cpuTemp) {
+  logging.add("Initializing CPU Temperature Sensor");
+  var cpuTemp = require('./temperature-cpu.js');
+  const intervalreadSec = 30;
+  cpuTemp.configure(config.intervals.cpu);
+  cpuTemp.readSensor();
+}
+else {
+  logging.add("Skipping CPU Temperature Sensor");
 }
 
 
@@ -96,27 +118,6 @@ function setKlappenStatus(status, fahrDauer) {
 // }
 stoppeMotor();
 logging.add("Motor initialisiert");
-
-if(!skipGpio.dht22) {
-  var sensorLib = require("node-dht-sensor");
-}
-if(!skipGpio.cpuTemp) {
-  var cpuTemp = require("pi-temperature");
-}
-
-dht22 = {
-  temperature: null,
-  humidity: null,
-  time: null,
-  intervalSec: config.intervals.dht22
-}
-
-cpu = {
-  temperature: null,
-  error: null,
-  time: null,
-  intervalSec: config.intervals.cpu
-}
 
 sensoren = {
   sensorOben: {
@@ -251,7 +252,6 @@ function setSensorMontiert(pos,boo) {
     }
     message = `Sensor ${pos} montiert: ${boo}`;
     success = true;
-    
   }
   else {
     message = `Bitte gültige Sensorposition (oben/unten) und gültigen Montage-Wert (true/false) angeben.`;
@@ -265,9 +265,6 @@ init();
 
 function init() {
   logging.add('Initializing 🐔 pok', 'info');
-  getCpuTemp();
-  getTemp();
-
 
   // Die manuelle Initialposition ist immer wichtiger als die automatische
   if (initialPositionManuell !== null) {
@@ -434,68 +431,6 @@ function bewegungSumme() {
   return klappe.hochSek - klappe.runterSek;
 }
 
-function getTemp() {
-  /* Diese Funktion wird von init() das erste mal aufgerufen
-     und plant sich danach alle x Sekunden selbst ein. Sie fragt
-     die Sensorwerte vom dht22-Sensor ab und legt sie zentral ab.
-     So wird vermieden dass der Sensorwert zu oft abgefragt werden muss.
-  */
-  logging.add("getTemp()");
-  if(!skipGpio.dht22) {
-    // DHT22 Temperature
-    sensorLib.read(22, 14, function(err, temperature, humidity) {
-      dht22.time = new Date();
-      if (!err) {
-        dht22.temperature = temperature;
-        dht22.humidity = humidity;
-        dht22.error = null;
-        logging.add(`temp: ${temperature}°C, humidity: ${humidity}%`);
-      }
-      else {
-        logging.add("DHT22 Error "+err,"error");
-        dht22.temperature = null;
-        dht22.humidity = null;
-        dht22.error = ""+err;
-      }
-
-    });
-  }
-  else {
-    dht22.time = new Date();
-    dht22.error = "Optional wird ein Fehler angezeigt";
-    dht22.temperature = 22;
-    dht22.humidity = 5;
-    logging.add(`${dht22.time} temp: ${dht22.temperature}°C, humidity: ${dht22.humidity}%`);
-  }
-  if(dht22.intervalSec) {
-    setTimeout(function temperaturErneutLesen() {
-      getTemp();
-    }, dht22.intervalSec * 1000);
-  }
-}
-
-function getCpuTemp() {
-  // CPU Temperature
-  cpuTemp.measure(function(err, temp) {
-    if (err) {
-      logging.add("CPU Temperatur Error "+err);
-      cpu.error = err;
-    }
-    else {
-      cpu.error = null;
-      cpu.temperature = temp;
-      cpu.time = new Date();
-      logging.add(`cpu: ${temp}°C`);
-      logging.thingspeakLog("field4="+cpu.temperature);
-    }
-    if(cpu.intervalSec) {
-      setTimeout(function temperaturErneutLesen() {
-        getCpuTemp();
-      }, cpu.intervalSec * 1000);
-    }
-  });
-}
-
 function kalibriere(obenUnten) {
   /* Wenn die Klappe entweder ganz oben oder ganz unten ist,
      wird diese Funktion aufgerufen, um diese Klappenposition
@@ -556,8 +491,8 @@ app.get('/status', function (req, res) {
     skipGpio: skipGpio,
     bme280: bme280.status,
     bewegungSumme: bewegungSumme(),
-    dht22: dht22,
-    cpu: cpu,
+    //dht22: dht22.status,
+    cpu: cpuTemp.status,
     sensoren: sensoren,
     camera: {
       image: 'http://192.168.31.21/cam',
