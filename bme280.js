@@ -33,11 +33,12 @@ readSensor = () => {
             status.busy = false;
             status.time = new moment();
             logging.add("Read bme280.");
-            logging.add(status);
-
+            logging.add(`temperature ${status.values.temperature} pressure ${status.values.pressure} humidity ${status.values.humidity}`);
             logging.thingspeakLog("field1="+status.values.temperature+"&field2="+status.values.pressure+"&field3="+status.values.humidity);
 
-        }).catch(console.log);
+        }).catch((e) => {
+            logging.add(error,'warn');
+        });
     }
     else {
         logging.add("BME280 readSensor() - busy (skip)");

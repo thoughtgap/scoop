@@ -15,8 +15,8 @@ consoleLog = SimpleNodeLogger.createSimpleLogger();
 
 add = (message, type = "info") => {
     let timestamp = moment();
-
     fileLog.log(type, message);
+    consoleLog.log(type, message);
 }
 
 
@@ -38,7 +38,7 @@ thingspeakLog = (urlStr) => {
         
         request(baseUrl + urlStr, { json: true }, (err, res, body) => {
             if (err) {
-                return console.log(err);
+                this.add(err,'warn');
             }
         });
     }

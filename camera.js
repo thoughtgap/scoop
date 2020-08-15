@@ -38,7 +38,6 @@ configure = (intervalSec, maxAgeSec) => {
 takePhoto = (force = false) => {
     let now = new Date();
     let max = camera.timeNextImage;
-    console.log(now, max);
     if(now <= max) {
         logging.add("Not taking picture. Picture still good.");
     }
@@ -58,10 +57,10 @@ takePhoto = (force = false) => {
 
           if(camera.lastRequest) {
             let diff = new moment().diff(camera.lastRequest);
-            console.log("Last picture is "+diff+ " old");
+            logging.add(`Last picture is ${diff / 1000}s old`);
       
             if(diff < 5 * 60 * 1000) {
-              console.log("Taking another picture in 10s until "+camera.lastRequest.format() + " +5min");
+              logging.add(`Taking another picture in 10s until ${camera.lastRequest.format()}  +5min`);
               setTimeout(function nextPicPls() {
                 takePhoto();
               }, 10 * 1000);

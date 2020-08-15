@@ -18,7 +18,6 @@ var initialPositionManuell = null;
 var log = [];
 
 let config = require('./config.json');
-console.log(config);
 
 const sensorObenMontiert = config.sensorObenMontiert;
 const sensorUntenMontiert = config.sensorUntenMontiert;
@@ -134,20 +133,6 @@ sensoren = {
   },
   intervalSec: config.intervals.sensoren
 }
-
-// Free up gpio ports
-// process.on('SIGINT', _ => {
-//   if(!skipGpio.sensoren) {
-//     console.log("Sensoren freigegeben");
-//     sensorOben.unexport();
-//     sensorUnten.unexport();
-//   }
-//   if(!skipGpio.motor) {
-//     console.log("Motor freigegeben");
-//     klappeHoch.unexport();
-//     klappeRunter.unexport();
-//   }
-// });
 
 // Initialisiere die Sensoren
 if(!skipGpio.sensoren) {
@@ -287,8 +272,8 @@ function init() {
   // Die manuelle Initialposition ist immer wichtiger als die automatische
   if (initialPositionManuell !== null) {
     initialPosition = initialPositionManuell;
-    console.log(`Initialposition: ${initialPosition} - aus manueller Angabe übernommen.`);
-    console.log("Erfolgreich initalisiert.");
+    logging.add(`Initialposition: ${initialPosition} - aus manueller Angabe übernommen.`);
+    logging.add("Erfolgreich initalisiert.");
     return true;
   }
 
@@ -307,7 +292,7 @@ function init() {
     // Es gibt nur eine Möglichkeit, die Initialposition ist hiermit klar.
     initialPosition = posWahrscheinlich[0];
 
-    console.log(`Initialposition: ${initialPosition}`);
+    logging.add(`Initialposition: ${initialPosition}`);
 
     setKlappenStatus("angehalten",null);
     logging.add("Initialisierung erfolgreich");
@@ -325,7 +310,7 @@ function manuelleInitialPosition(pos) {
     initialPositionManuell = pos;
     return true;
   }
-  console.log("Fehler: Keine gültige manuelle Initialposition (oben/unten)")
+  logging.add("Fehler: Keine gültige manuelle Initialposition (oben/unten)")
   return false;
 }
 
@@ -422,13 +407,8 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
         }
         klappe.positionNum += fahrtWert;
 
-        console.log({
-          sekunden: sekunden,
-          ganzeFahrtSek: ganzeFahrtSek,
-          positionNum: klappe.positionNum,
-          richtung: richtung,
-          bool: (sekunden >= ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == ganzeFahrtSek)
-        });
+        logging.add(`sekunden: ${sekunden}, ganzeFahrtSek: ${ganzeFahrtSek}, positionNum: ${klappe.positionNum}, richtung: ${richtung}, bool: ${(sekunden >= ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == ganzeFahrtSek)}`);
+
         if(sekunden >= ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == ganzeFahrtSek) {
           if(richtung == "hoch") {
             klappe.position = "oben";
@@ -485,7 +465,7 @@ function getTemp() {
     dht22.error = "Optional wird ein Fehler angezeigt";
     dht22.temperature = 22;
     dht22.humidity = 5;
-    console.log(`${dht22.time} temp: ${dht22.temperature}°C, humidity: ${dht22.humidity}%`);
+    logging.add(`${dht22.time} temp: ${dht22.temperature}°C, humidity: ${dht22.humidity}%`);
   }
   if(dht22.intervalSec) {
     setTimeout(function temperaturErneutLesen() {
@@ -639,8 +619,7 @@ app.get('/reset', function (req, res) {
     var data = fs.readFileSync('test.json', 'utf-8');
     var newValue = new Date();
     fs.writeFileSync('test.json', newValue, 'utf-8');
-    console.log('readFileSync complete');
-  res.send(action);
+    res.send("modified test.json");
 });
 app.get('/cam/new', function (req, res) {
   camera.takePhoto(true);
