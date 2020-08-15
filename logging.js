@@ -1,6 +1,5 @@
 var moment = require('moment');
 const request = require('request');
-var log = [];
 
 const SimpleNodeLogger = require('simple-node-logger');
 const opts2 = {
@@ -16,7 +15,6 @@ consoleLog = SimpleNodeLogger.createSimpleLogger();
 add = (message, type = "info") => {
     let timestamp = moment();
 
-    //console.log(timestamp.format('YYYY-MM-D H:mm:ss') + " * "+message);
     if (type == "error") {
         fileLog.warn(message);
         consoleLog.warn(message);
@@ -25,15 +23,11 @@ add = (message, type = "info") => {
         fileLog.info(message);
         consoleLog.info(message);
     }
-
-
-    log.push({
-        "time": timestamp,
-        "log": message
-    });
 }
 
+// Logging to Thingspeak
 thingspeakAPIKey = null;
+
 thingspeakSetAPIKey = (apikey) => {
     thingspeakAPIKey = apikey;
 }
