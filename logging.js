@@ -1,29 +1,24 @@
 var moment = require('moment');
 const request = require('request');
-
 const SimpleNodeLogger = require('simple-node-logger');
-const opts2 = {
+
+// Logging to files
+const fileLogConfig = {
     logDirectory: './logs/',
     errorEventName: 'error',
     fileNamePattern: 'log-<DATE>.log',
     dateFormat: 'YYYY-MM-DD'
 };
 
-fileLog = SimpleNodeLogger.createRollingFileLogger(opts2);
+fileLog = SimpleNodeLogger.createRollingFileLogger(fileLogConfig);
 consoleLog = SimpleNodeLogger.createSimpleLogger();
 
 add = (message, type = "info") => {
     let timestamp = moment();
 
-    if (type == "error") {
-        fileLog.warn(message);
-        consoleLog.warn(message);
-    }
-    else {
-        fileLog.info(message);
-        consoleLog.info(message);
-    }
+    fileLog.log(type, message);
 }
+
 
 // Logging to Thingspeak
 thingspeakAPIKey = null;
@@ -50,6 +45,5 @@ thingspeakLog = (urlStr) => {
 }
 
 exports.add = add;
-exports.log = log;
 exports.thingspeakLog = thingspeakLog;
 exports.thingspeakSetAPIKey = thingspeakSetAPIKey;

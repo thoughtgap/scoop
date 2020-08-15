@@ -47,15 +47,15 @@ gpioMotor.configure( config.gpioPorts.out.hoch,
                 skipGpio.motor);
 
 if(!skipGpio.bme280) {
-  addLog("Initializing BME280 Temperature Sensor");
+  logging.add("Initializing BME280 Temperature Sensor");
   var bme280 = require('./bme280.js');
   const intervalreadSec = 30;
   bme280.configure(config.gpioPorts.out.bme280, config.intervals.bme280);
-  addLog("CONFIG BME");
+  logging.add("CONFIG BME");
   bme280.readSensor();
 }
 else {
-  addLog("Skipping BME280 Temperature Sensor");
+  logging.add("Skipping BME280 Temperature Sensor");
 }
 
 
@@ -87,7 +87,7 @@ function setKlappenStatus(status, fahrDauer) {
   klappe.perf = performance.now();
 
   klappe.duration = klappe.perf - klappe.previous.perf;
-  addLog("Klappenstatus "+ status + " nach "+ (klappe.duration / 1000) + "s - Fahrdauer "+ klappe.previous.fahrDauer + " - jetzt "+fahrDauer+"s");
+  logging.add("Klappenstatus "+ status + " nach "+ (klappe.duration / 1000) + "s - Fahrdauer "+ klappe.previous.fahrDauer + " - jetzt "+fahrDauer+"s");
 }
 
 
@@ -96,7 +96,7 @@ function setKlappenStatus(status, fahrDauer) {
 //   var Gpio = require('onoff').Gpio;
 // }
 stoppeMotor();
-addLog("Motor initialisiert");
+logging.add("Motor initialisiert");
 
 if(!skipGpio.dht22) {
   var sensorLib = require("node-dht-sensor");
@@ -156,17 +156,17 @@ if(!skipGpio.sensoren) {
 
   sensorOben.watch((err, value) => {
     sensorPressed("oben",value);
-    //addLog("sensorOben: " + value + sensorOben.readSync());
+    //logging.add("sensorOben: " + value + sensorOben.readSync());
   });
   
   sensorUnten.watch((err, value) => {
     sensorPressed("unten",value);
-    //addLog("sensorUnen: "+value + sensorUnten.readSync());
+    //logging.add("sensorUnen: "+value + sensorUnten.readSync());
   });
 }
 
 function sensorPressed(position,value) {
-  addLog("sensorPressed: "+position+ " " + (value == 1 ? "losgelassen" : "gedrückt") + "(" + value + ")");
+  logging.add("sensorPressed: "+position+ " " + (value == 1 ? "losgelassen" : "gedrückt") + "(" + value + ")");
 
   if(position == "oben") {
     sensorObenWert(value,null);
@@ -196,7 +196,7 @@ function sensorObenWert(value,err) {
 
   }
   sensoren.sensorOben.time = new Date();
-  addLog("leseSensoren Oben "+value);
+  logging.add("leseSensoren Oben "+value);
 }
 function sensorUntenWert(value,err) {
   if (err) {
@@ -215,7 +215,7 @@ function sensorUntenWert(value,err) {
     }
   }
   sensoren.sensorUnten.time = new Date();
-  addLog("leseSensoren Unten "+value);
+  logging.add("leseSensoren Unten "+value);
 }
 
 function leseSensoren() {
@@ -272,26 +272,14 @@ function setSensorMontiert(pos,boo) {
     message = `Bitte gültige Sensorposition (oben/unten) und gültigen Montage-Wert (true/false) angeben.`;
     success = false;  
   }
-  addLog(message);
+  logging.add(message);
   return {success: success, message: message};
 }
 
-function addLog(message, type="info") {
-  logging.add(message, type);
-  // let timestamp = moment();
-
-  // console.log(timestamp.format('YYYY-MM-D H:mm:ss') + ": "+message);
-  // log.push({
-  //   "time": timestamp,
-  //   "log": message
-  // });
-}
-
-console.log("pok 🐔");
 init();
 
 function init() {
-  addLog("Versuche zu initialisieren");
+  logging.add('Initializing 🐔 pok', 'info');
   getCpuTemp();
   getTemp();
 
@@ -322,12 +310,12 @@ function init() {
     console.log(`Initialposition: ${initialPosition}`);
 
     setKlappenStatus("angehalten",null);
-    addLog("Initialisierung erfolgreich");
+    logging.add("Initialisierung erfolgreich");
     return true;
   }
   else {
     // Kann keine mögliche Position ableiten, braucht manuellen Input.
-    addLog("Konnte keine Initialposition ermitteln. Brauche manuellen Input.");
+    logging.add("Konnte keine Initialposition ermitteln. Brauche manuellen Input.");
     return false;
   }
 }
@@ -342,12 +330,12 @@ function manuelleInitialPosition(pos) {
 }
 
 function korrigiereHoch() {
-  addLog("Korrigiere hoch");
+  logging.add("Korrigiere hoch");
   // TODO Akzeptiert er nicht mehr, weil die neue Position out of bounds wäre.
   return klappeFahren("hoch",korrekturSekunden,true);
 }
 function korrigiereRunter() {
-  addLog("Korrigiere runter");
+  logging.add("Korrigiere runter");
   // TODO Akzeptiert er nicht mehr, weil die neue Position out of bounds wäre.
   return klappeFahren("runter",korrekturSekunden,true);
 }
@@ -372,22 +360,22 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
   if(klappe.status != "angehalten") {
     response.success = false;
     response.message = `klappe: Die ist gar nicht angehalten`;
-    addLog(response.message);
+    logging.add(response.message);
   }
   else if(richtung != "hoch" && richtung != "runter") {
     response.success = false;
     response.message = `klappe: Keine gültige Richtung angebeben (hoch/runter)`;
-    addLog(response.message);
+    logging.add(response.message);
   }
   else if (!initialisiert && sekunden > korrekturSekunden) {
     response.success = false;
     response.message = `klappe ${richtung}: ${sekunden}s geht nicht. Noch nicht kalibriert`;
-    addLog(response.message);
+    logging.add(response.message);
   }
   else if (sekunden > maxSekundenEinWeg) {
     response.success = false;
     response.message = `klappe ${richtung}: ${sekunden}s ist zu lang, maximal ${maxSekundenEinWeg}s erlaubt`;
-    addLog(response.message);
+    logging.add(response.message);
   }
   else if ((!initialisiert && sekunden <= korrekturSekunden) || initialisiert) {
 
@@ -398,15 +386,15 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
     
     if(Math.abs(neuePosition) > ganzeFahrtSek || neuePosition < 0 || neuePosition > ganzeFahrtSek) {
       response.message = `HALLO FALSCH DA REISST DER FADEN! klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`;
-      addLog(response.message);
+      logging.add(response.message);
       response.success = false;
     } else {
-      addLog(`klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`);
+      logging.add(`klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`);
 
       // Klappe für x Sekunden
       response.success = true;
       response.message = `klappe ${richtung}: für ${sekunden}s ${korrektur ? '(korrektur)' : ''}`;
-      addLog(response.message);
+      logging.add(response.message);
 
       // Starte den Motor jetzt.
       if(richtung == "hoch") {
@@ -455,7 +443,7 @@ function klappeFahren(richtung,sekunden,korrektur=false) {
   }
   else {
     response.message = `klappe ${richtung}: ${sekunden} geht nicht. Grund nicht erkennbar.`;
-    addLog(response.message);
+    logging.add(response.message);
     response.success = false;
   }
 
@@ -472,7 +460,7 @@ function getTemp() {
      die Sensorwerte vom dht22-Sensor ab und legt sie zentral ab.
      So wird vermieden dass der Sensorwert zu oft abgefragt werden muss.
   */
-  addLog("getTemp()");
+  logging.add("getTemp()");
   if(!skipGpio.dht22) {
     // DHT22 Temperature
     sensorLib.read(22, 14, function(err, temperature, humidity) {
@@ -481,10 +469,10 @@ function getTemp() {
         dht22.temperature = temperature;
         dht22.humidity = humidity;
         dht22.error = null;
-        addLog(`temp: ${temperature}°C, humidity: ${humidity}%`);
+        logging.add(`temp: ${temperature}°C, humidity: ${humidity}%`);
       }
       else {
-        addLog("DHT22 Error "+err,"error");
+        logging.add("DHT22 Error "+err,"error");
         dht22.temperature = null;
         dht22.humidity = null;
         dht22.error = ""+err;
@@ -510,14 +498,14 @@ function getCpuTemp() {
   // CPU Temperature
   cpuTemp.measure(function(err, temp) {
     if (err) {
-      addLog("CPU Temperatur Error "+err);
+      logging.add("CPU Temperatur Error "+err);
       cpu.error = err;
     }
     else {
       cpu.error = null;
       cpu.temperature = temp;
       cpu.time = new Date();
-      addLog(`cpu: ${temp}°C`);
+      logging.add(`cpu: ${temp}°C`);
       logging.thingspeakLog("field4="+cpu.temperature);
     }
     if(cpu.intervalSec) {
@@ -544,7 +532,7 @@ function kalibriere(obenUnten) {
   setKlappenStatus("angehalten", null);
   initialisiert = true;
   let message = `Position ${klappe.position} kalibriert.`;
-  addLog(message);
+  logging.add(message);
   return {success: true, message: message};
 }
 
@@ -555,31 +543,27 @@ var camera = require('./camera.js');
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+  logging.add(`req ${req.method} ${req.originalUrl} from ${( req.headers['x-forwarded-for'] || req.connection.remoteAddress )}`, 'info');
   next();
 });
-//app.use('/frontend', express.static('frontend'));
+
 
 app.get('/', function (req, res) {
   res.send('Hello 🐔!');
-  console.log("Serving /");
 });
-
 app.get('/frontend/index.html', function (req, res) {
-  console.log("Serving /frontend/index.html");
   res.sendFile(__dirname + '/frontend/index.html');
 });
 app.get('/frontend/coop.js', function (req, res) {
-  console.log("Serving /frontend/coop.js");
   res.sendFile(__dirname + '/frontend/coop.js');
 });
 app.get('/frontend/chick.svg', function (req, res) {
-  console.log("Serving /frontend/chick.svg");
   res.sendFile(__dirname + '/frontend/chick.svg');
 });
 
 
 app.get('/status', function (req, res) {
-  console.log("Serving /status");
   res.send({
     klappe: klappe,
     initialisiert: initialisiert,
@@ -590,7 +574,6 @@ app.get('/status', function (req, res) {
     maxSekundenEinWeg: maxSekundenEinWeg,
     korrekturSekunden: korrekturSekunden,
     skipGpio: skipGpio,
-    //log: log.slice(1).slice(-50),
     bme280: bme280.status,
     bewegungSumme: bewegungSumme(),
     dht22: dht22,
@@ -607,28 +590,23 @@ app.get('/status', function (req, res) {
   });
 });
 app.get('/log', function (req, res) {
-  console.log("Serving /log");
   res.send({
     log: log
   });
 });
 app.get('/korrigiere/hoch', function (req, res) {
-  console.log("Serving /korrigiere/hoch");
   action = korrigiereHoch();
   res.send(action);
 });
 app.get('/korrigiere/runter', function (req, res) {
-  console.log("Serving /korrigiere/runter");
   action = korrigiereRunter();
   res.send(action);
 });
 app.get('/kalibriere/:obenUnten', function (req, res) {
-  console.log("Serving /kalibriere/"+req.params.obenUnten);
   action = kalibriere(req.params.obenUnten);
   res.send(action);
 });
 app.get('/hoch', function (req, res) {
-  console.log("Serving /hoch");
   action = klappeFahren("hoch",ganzeFahrtSek);
   if(action.success != true) {
     res.status(403);
@@ -636,7 +614,6 @@ app.get('/hoch', function (req, res) {
   res.send(action);
 });
 app.get('/runter', function (req, res) {
-  console.log("Serving /runter");
   action = klappeFahren("runter",ganzeFahrtSek);
   if(action.success != true) {
     res.status(403);
@@ -644,7 +621,6 @@ app.get('/runter', function (req, res) {
   res.send(action);
 });
 app.get('/hoch/:wielange', function (req, res) {
-  console.log("Serving /hoch/"+req.params.wielange);
   action = klappeFahren("hoch",parseFloat(req.params.wielange));
   if(action.success != true) {
     res.status(403);
@@ -652,7 +628,6 @@ app.get('/hoch/:wielange', function (req, res) {
   res.send(action);
 });
 app.get('/runter/:wielange', function (req, res) {
-  console.log("Serving /runter/"+req.params.wielange);
   action = klappeFahren("runter",parseFloat(req.params.wielange));
   if(action.success != true) {
     res.status(403);
@@ -660,8 +635,7 @@ app.get('/runter/:wielange', function (req, res) {
   res.send(action);
 });
 app.get('/reset', function (req, res) {
-  console.log("Serving /reset/");
-  
+    /* Dirty hack for triggering nodemon */
     var data = fs.readFileSync('test.json', 'utf-8');
     var newValue = new Date();
     fs.writeFileSync('test.json', newValue, 'utf-8');
@@ -669,13 +643,10 @@ app.get('/reset', function (req, res) {
   res.send(action);
 });
 app.get('/cam/new', function (req, res) {
-  console.log("Serving /cam/new");
   camera.takePhoto(true);
   res.send({message:"foto in auftrag gegeben. abholen unter /cam"});
 });
 app.get('/cam/:timestamp?', function (req, res) {
-  console.log("Serving /cam/");
-  
   if(camera.getJpg()) {
     res.contentType('image/jpeg');
     res.send(camera.getJpg());
@@ -685,8 +656,6 @@ app.get('/cam/:timestamp?', function (req, res) {
   }
 });
 app.get('/camsvg/:timestamp?', function (req, res) {
-  console.log("Serving /camsvg/");
-
     res.contentType('image/svg+xml');
     res.send(camera.getSvg());
 });
