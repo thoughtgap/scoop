@@ -46,9 +46,6 @@ gpioMotor.configure( config.gpioPorts.out.hoch,
                 config.motorEin,
                 skipGpio.motor);
 
-var logging = require('./logging.js');
-logging.add("Testlog");
-
 if(!skipGpio.bme280) {
   addLog("Initializing BME280 Temperature Sensor");
   var bme280 = require('./bme280.js');
