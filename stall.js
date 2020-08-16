@@ -7,15 +7,10 @@ const { PerformanceObserver, performance } = require('perf_hooks');
 var moment = require('moment');
 
 var logging = require('./logging.js');
-
-var t0 = performance.now();
-
 var initialisiert = false;
 
 var initialPosition = null;
 var initialPositionManuell = null;
-
-var log = [];
 
 let config = require('./config.json');
 
@@ -48,9 +43,8 @@ gpioMotor.configure( config.gpioPorts.out.hoch,
 if(!skipGpio.bme280) {
   logging.add("Initializing BME280 Temperature Sensor");
   var bme280 = require('./temperature-bme280.js');
-  const intervalreadSec = 30;
   bme280.configure(config.gpioPorts.out.bme280, config.intervals.bme280);
-  logging.add("CONFIG BME");
+  logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`);
   bme280.readSensor();
 }
 else {
@@ -60,7 +54,6 @@ else {
 if(!skipGpio.dht22) {
   logging.add("Initializing DHT22 Temperature Sensor");
   var dht22 = require('./temperature-dht22.js');
-  const intervalreadSec = 30;
   dht22.configure(config.gpioPorts.out.dht22, config.intervals.dht22);
   dht22.readSensor();
 }
@@ -71,15 +64,12 @@ else {
 if(!skipGpio.cpuTemp) {
   logging.add("Initializing CPU Temperature Sensor");
   var cpuTemp = require('./temperature-cpu.js');
-  const intervalreadSec = 30;
   cpuTemp.configure(config.intervals.cpu);
   cpuTemp.readSensor();
 }
 else {
   logging.add("Skipping CPU Temperature Sensor");
 }
-
-
 
 
 klappe = {
@@ -492,7 +482,7 @@ app.get('/status', function (req, res) {
     bme280: bme280.status,
     bewegungSumme: bewegungSumme(),
     //dht22: dht22.status,
-    cpu: cpuTemp.status,
+    cpuTemp: cpuTemp.status,
     sensoren: sensoren,
     camera: {
       image: 'http://192.168.31.21/cam',
