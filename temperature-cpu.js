@@ -16,13 +16,13 @@ configure = (intervalSec) => {
     status.intervalSec = intervalSec;
 }
 
-readSensor = () => {
+readCPUTemp = () => {
     if (!status.busy) {
         logging.add("CPU-Temp readSensor() getting sensor data", 'debug');
 
         status.busy = true;
         cpuTemp.measure(function(err, temp) {
-            status.busy = false;    
+            status.busy = false;
             if (err) {
               logging.add("CPU Temperatur Error "+err, 'warn');
               status.error = err;
@@ -36,7 +36,7 @@ readSensor = () => {
             }
             if(status.intervalSec) {
               setTimeout(function temperaturErneutLesen() {
-                getCpuTemp();
+                readCPUTemp();
               }, status.intervalSec * 1000);
             }
           });
@@ -44,13 +44,8 @@ readSensor = () => {
     else {
         logging.add("CPU Temp readSensor() - busy (skip)");
     }
-    if(status.intervalSec) {
-        setTimeout(function erneutLesen() {
-            readSensor();
-        }, status.intervalSec * 1000);
-    }
 }
 
 exports.configure = configure;
-exports.readSensor = readSensor;
+exports.readSensor = readCPUTemp;
 exports.status = status;
