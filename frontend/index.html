@@ -248,10 +248,10 @@
             am-time-ago="coopStatus.bme280.time"></time><br />
         </p>
         <p>
-          CPU: {{coopStatus.cpu.temperature}}°C (<time am-time-ago="coopStatus.cpu.time"></time>)
-          (alle {{coopStatus.cpu.intervalSec}}s)
-        <p ng-show="coopStatus.cpu.error">
-          Fehler: {{coopStatus.cpu.error}}
+          CPU: {{coopStatus.cpuTemp.values.temperature}}°C (<time am-time-ago="coopStatus.cpu.time"></time>)
+          (alle {{coopStatus.cpuTemp.intervalSec}}s)
+        <p ng-show="coopStatus.cpuTemp.error">
+          Fehler: {{coopStatus.cpuTemp.error}}
         </p>
         </p>
         <p>
