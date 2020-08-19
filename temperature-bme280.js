@@ -16,18 +16,18 @@ var status = {
 var config = {
     port: null
 }
-// Todo aus zentraler Configdatei holen.
 
 configure = (port, intervalSec) => {
+    logging.add(`BME280 configure Port ${port} Interval ${intervalSec}`);
     status.intervalSec = intervalSec;
-    config.port = port;
+    config.port = Number(port);
 }
 
 readBME280 = () => {
     if (!status.busy && config.port !== null) {
         logging.add("BME280 readSensor() getting sensor data");
         status.busy = true;
-        bme280.open({ i2cAddress: 0x76 }).then(async sensor => {
+        bme280.open({ i2cAddress: config.port }).then(async sensor => {
             status.values = await sensor.read();
             await sensor.close();
             status.busy = false;
@@ -42,7 +42,7 @@ readBME280 = () => {
             }
 
         }).catch((e) => {
-            logging.add(error,'warn');
+            logging.add(e,'warn');
 
             logging.add("BME280 next value in "+status.intervalSec,'debug');
             if(status.intervalSec) {

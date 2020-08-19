@@ -43,7 +43,7 @@ gpioMotor.configure( config.gpioPorts.out.hoch,
 if(!skipGpio.bme280) {
   logging.add("Initializing BME280 Temperature Sensor");
   var bme280 = require('./temperature-bme280.js');
-  bme280.configure(config.gpioPorts.out.bme280, config.intervals.bme280);
+  bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
   logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`);
   bme280.readSensor();
 }
