@@ -7,22 +7,11 @@ const { PerformanceObserver, performance } = require('perf_hooks');
 var moment = require('moment');
 
 var logging = require('./logging.js');
-var initialisiert = false;
-
-var initialPosition = null;
-var initialPositionManuell = null;
 
 let config = require('./config.json');
-
-const sensorObenMontiert = config.sensorObenMontiert;
-const sensorUntenMontiert = config.sensorUntenMontiert;
-const ganzeFahrtSek = config.ganzeFahrtSek;
-const maxSekundenEinWeg = config.maxSekundenEinWeg;
-const korrekturSekunden = config.korrekturSekunden;
 logging.thingspeakSetAPIKey(config.thingspeakAPI);
 
-const motorAus = config.motorAus;
-const motorEin = config.motorEin;
+const ganzeFahrtSek = config.ganzeFahrtSek;
 
 const skipGpio = {
   "motor": config.skipGpio.motor,
@@ -30,8 +19,6 @@ const skipGpio = {
   "sensoren": config.skipGpio.sensoren,
   "bme280": config.skipGpio.bme280
 }
-
-const gpioPorts = config.gpioPorts;
 
 var gpioMotor = require('./gpio-motor.js');
 gpioMotor.configure( config.gpioPorts.out.hoch,
@@ -71,41 +58,16 @@ else {
   logging.add("Skipping CPU Temperature Sensor");
 }
 
+var klappenModul = require('./klappe.js');
+klappenModul.configure(
+  config.sensorObenMontiert,
+  config.sensorUntenMontiert,
+  config.ganzeFahrtSek,
+  config.maxSekundenEinWeg,
+  config.korrekturSekunden,
+  skipGpio
+);
 
-klappe = {
-  status: "not initialized",
-  fahrDauer: null, // für wieviele Sekunden fährt die Klappe gerade
-  hochSek: null,   // wieviele Sekunden ist die Klappe hoch gefahren
-  runterSek: null, // wieviele Sekunden ist die Klappe runter gefahren
-  position: null,
-  positionNum: null,
-  zeit: null,
-  perf: performance.now()
-}
-
-function setKlappenStatus(status, fahrDauer) {
-  // Merke alte Werte
-  klappe.previous = {
-    status: klappe.status,
-    zeit: klappe.zeit,
-    fahrDauer: klappe.fahrDauer,
-    perf: klappe.perf,
-  }
-
-  klappe.status = status;
-  klappe.zeit = new Date();
-  klappe.fahrDauer = fahrDauer;
-  klappe.perf = performance.now();
-
-  klappe.duration = klappe.perf - klappe.previous.perf;
-  logging.add("Klappenstatus "+ status + " nach "+ (klappe.duration / 1000) + "s - Fahrdauer "+ klappe.previous.fahrDauer + " - jetzt "+fahrDauer+"s");
-}
-
-
-// Initialisiere den Motor und die GPIO-Ports
-// if(!skipGpio.motor) {
-//   var Gpio = require('onoff').Gpio;
-// }
 stoppeMotor();
 logging.add("Motor initialisiert");
 
@@ -127,8 +89,8 @@ sensoren = {
 
 // Initialisiere die Sensoren
 if(!skipGpio.sensoren) {
-  sensorOben = new Gpio(gpioPorts.in.oben, 'in', 'both', {debounceTimeout: 10});
-  sensorUnten = new Gpio(gpioPorts.in.unten, 'in', 'both', {debounceTimeout: 10});
+  sensorOben = new Gpio(config.gpioPorts.in.oben, 'in', 'both', {debounceTimeout: 10});
+  sensorUnten = new Gpio(config.gpioPorts.in.unten, 'in', 'both', {debounceTimeout: 10});
 
   sensorOben.watch((err, value) => {
     sensorPressed("oben",value);
@@ -168,8 +130,6 @@ function sensorObenWert(value,err) {
     if(value == 0) {
       stoppeMotor();
     }
-
-
   }
   sensoren.sensorOben.time = new Date();
   logging.add("leseSensoren Oben "+value);
@@ -225,221 +185,38 @@ function leseSensoren() {
 leseSensoren();
 
 function stoppeMotor() {
-  gpioMotor.stoppeMotor();
-  setKlappenStatus("angehalten",null)
-}
-
-function setSensorMontiert(pos,boo) {
-  // !TODO
-  // Hiermit kann man setzen, ob die einzelnen Sensoren montiert sind oder nicht.
-  // Falls ein Sensor kaputt geht kann man die Sensoren-Sicherheitsnetze so umgehen.
-  if((pos == "oben" || pos == "unten") && (boo == true || boo == false)) {
-    if(pos == "oben") {
-      sensorObenMontiert = boo;
-    }
-    else {
-      sensorUntenMontiert = boo;
-    }
-    message = `Sensor ${pos} montiert: ${boo}`;
-    success = true;
+  if(klappenModul.klappe.status !== "angehalten") {
+    gpioMotor.stoppeMotor();
+    klappenModul.setKlappenStatus("angehalten",null);
   }
   else {
-    message = `Bitte gültige Sensorposition (oben/unten) und gültigen Montage-Wert (true/false) angeben.`;
-    success = false;  
-  }
-  logging.add(message);
-  return {success: success, message: message};
+    logging.add("Skip stoppeMotor, klappe.status == angehalten.");
+  }  
 }
 
-init();
+// function setSensorMontiert(pos,boo) {
+//   // !TODO
+//   // Hiermit kann man setzen, ob die einzelnen Sensoren montiert sind oder nicht.
+//   // Falls ein Sensor kaputt geht kann man die Sensoren-Sicherheitsnetze so umgehen.
+//   if((pos == "oben" || pos == "unten") && (boo == true || boo == false)) {
+//     if(pos == "oben") {
+//       sensorObenMontiert = boo;
+//     }
+//     else {
+//       sensorUntenMontiert = boo;
+//     }
+//     message = `Sensor ${pos} montiert: ${boo}`;
+//     success = true;
+//   }
+//   else {
+//     message = `Bitte gültige Sensorposition (oben/unten) und gültigen Montage-Wert (true/false) angeben.`;
+//     success = false;  
+//   }
+//   logging.add(message);
+//   return {success: success, message: message};
+// }
 
-function init() {
-  logging.add('Initializing 🐔 pok', 'info');
-
-  // Die manuelle Initialposition ist immer wichtiger als die automatische
-  if (initialPositionManuell !== null) {
-    initialPosition = initialPositionManuell;
-    logging.add(`Initialposition: ${initialPosition} - aus manueller Angabe übernommen.`);
-    logging.add("Erfolgreich initalisiert.");
-    return true;
-  }
-
-  // Ableitung der Initialposition aus den aktuellen Sensorständen
-  let posWahrscheinlich = [];
-  if (sensorObenMontiert && sensorObenWert() == "gedrückt") {
-    // Die Position ist wahrscheinlich oben
-    posWahrscheinlich.push("oben");
-  }
-  if (sensorUntenMontiert && sensorUntenWert() == "gedrückt") {
-    // Die Position ist wahrscheinlich unten
-    posWahrscheinlich.push("unten");
-  }
-
-  if (posWahrscheinlich.length == 1) {
-    // Es gibt nur eine Möglichkeit, die Initialposition ist hiermit klar.
-    initialPosition = posWahrscheinlich[0];
-
-    logging.add(`Initialposition: ${initialPosition}`);
-
-    setKlappenStatus("angehalten",null);
-    logging.add("Initialisierung erfolgreich");
-    return true;
-  }
-  else {
-    // Kann keine mögliche Position ableiten, braucht manuellen Input.
-    logging.add("Konnte keine Initialposition ermitteln. Brauche manuellen Input.");
-    return false;
-  }
-}
-
-function manuelleInitialPosition(pos) {
-  if (pos == "oben" || pos == "runter") {
-    initialPositionManuell = pos;
-    return true;
-  }
-  logging.add("Fehler: Keine gültige manuelle Initialposition (oben/unten)")
-  return false;
-}
-
-function korrigiereHoch() {
-  logging.add("Korrigiere hoch");
-  // TODO Akzeptiert er nicht mehr, weil die neue Position out of bounds wäre.
-  return klappeFahren("hoch",korrekturSekunden,true);
-}
-function korrigiereRunter() {
-  logging.add("Korrigiere runter");
-  // TODO Akzeptiert er nicht mehr, weil die neue Position out of bounds wäre.
-  return klappeFahren("runter",korrekturSekunden,true);
-}
-
-function klappeFahren(richtung,sekunden,korrektur=false) {
-  let response = {
-    success: false,
-    message: ""
-  }
-
-  fahrtWert = null;
-  if(richtung == "hoch") {
-    fahrtWert = 1;
-  }
-  else if (richtung == "runter") {
-    fahrtWert = -1;
-  }
-  fahrtWert = fahrtWert * sekunden
-  neuePosition = klappe.positionNum + fahrtWert;
-  
-
-  if(klappe.status != "angehalten") {
-    response.success = false;
-    response.message = `klappe: Die ist gar nicht angehalten`;
-    logging.add(response.message);
-  }
-  else if(richtung != "hoch" && richtung != "runter") {
-    response.success = false;
-    response.message = `klappe: Keine gültige Richtung angebeben (hoch/runter)`;
-    logging.add(response.message);
-  }
-  else if (!initialisiert && sekunden > korrekturSekunden) {
-    response.success = false;
-    response.message = `klappe ${richtung}: ${sekunden}s geht nicht. Noch nicht kalibriert`;
-    logging.add(response.message);
-  }
-  else if (sekunden > maxSekundenEinWeg) {
-    response.success = false;
-    response.message = `klappe ${richtung}: ${sekunden}s ist zu lang, maximal ${maxSekundenEinWeg}s erlaubt`;
-    logging.add(response.message);
-  }
-  else if ((!initialisiert && sekunden <= korrekturSekunden) || initialisiert) {
-
-
-    // Überprüfe ob die Fahrt zulässig ist (nicht zu weit hoch/runter)
-    // klappe.hochSek
-    // klappe.runterSek
-    
-    if(Math.abs(neuePosition) > ganzeFahrtSek || neuePosition < 0 || neuePosition > ganzeFahrtSek) {
-      response.message = `HALLO FALSCH DA REISST DER FADEN! klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`;
-      logging.add(response.message);
-      response.success = false;
-    } else {
-      logging.add(`klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`);
-
-      // Klappe für x Sekunden
-      response.success = true;
-      response.message = `klappe ${richtung}: für ${sekunden}s ${korrektur ? '(korrektur)' : ''}`;
-      logging.add(response.message);
-
-      // Starte den Motor jetzt.
-      if(richtung == "hoch") {
-        if(!skipGpio.motor) {
-          gpioMotor.fahreHoch();
-        }
-      }
-      else if (richtung == "runter") {
-        if(!skipGpio.motor) {
-          gpioMotor.fahreRunter();
-        }
-      }
-      setKlappenStatus("fahre"+richtung, sekunden);
-
-      // Motor später wieder abschalten
-      setTimeout(function motorSpaeterAnhalten() {
-        stoppeMotor();
-
-        // Merke wieviel hoch/runter gefahren
-        if(richtung == "hoch") {
-          klappe.hochSek += sekunden;
-        }
-        else if(richtung == "runter") {
-          klappe.runterSek += sekunden;
-        }
-        klappe.positionNum += fahrtWert;
-
-        logging.add(`sekunden: ${sekunden}, ganzeFahrtSek: ${ganzeFahrtSek}, positionNum: ${klappe.positionNum}, richtung: ${richtung}, bool: ${(sekunden >= ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == ganzeFahrtSek)}`);
-
-        if(sekunden >= ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == ganzeFahrtSek) {
-          if(richtung == "hoch") {
-            klappe.position = "oben";
-          }
-          else {
-            klappe.position = "unten";
-          }
-        }
-
-      }, sekunden * 1000);
-    }
-  }
-  else {
-    response.message = `klappe ${richtung}: ${sekunden} geht nicht. Grund nicht erkennbar.`;
-    logging.add(response.message);
-    response.success = false;
-  }
-
-  return response;
-}
-
-function bewegungSumme() {
-  return klappe.hochSek - klappe.runterSek;
-}
-
-function kalibriere(obenUnten) {
-  /* Wenn die Klappe entweder ganz oben oder ganz unten ist,
-     wird diese Funktion aufgerufen, um diese Klappenposition
-     zu merken.
-  */
-
-  if(obenUnten != "oben" && obenUnten != "unten") {
-    return {success: false, message: "Bitte Position (oben/unten) korrekt angeben"};
-  }
-  klappe.position = obenUnten;
-  klappe.positionNum = (obenUnten == "oben" ? 1 : 0) * ganzeFahrtSek;
-  klappe.hochSek = 0;
-  klappe.runterSek = 0;
-  setKlappenStatus("angehalten", null);
-  initialisiert = true;
-  let message = `Position ${klappe.position} kalibriert.`;
-  logging.add(message);
-  return {success: true, message: message};
-}
+klappenModul.init();
 
 var camera = require('./camera.js');
 
@@ -457,6 +234,8 @@ app.use(function(req, res, next) {
 app.get('/', function (req, res) {
   res.send('Hello 🐔!');
 });
+
+// Hacky frontend delivery
 app.get('/frontend/index.html', function (req, res) {
   res.sendFile(__dirname + '/frontend/index.html');
 });
@@ -467,20 +246,19 @@ app.get('/frontend/chick.svg', function (req, res) {
   res.sendFile(__dirname + '/frontend/chick.svg');
 });
 
-
 app.get('/status', function (req, res) {
   res.send({
-    klappe: klappe,
-    initialisiert: initialisiert,
-    initialPosition: initialPosition,
-    initialPositionManuell: initialPositionManuell,
-    sensorObenMontiert: sensorObenMontiert,
-    sensorUntenMontiert: sensorUntenMontiert,
-    maxSekundenEinWeg: maxSekundenEinWeg,
-    korrekturSekunden: korrekturSekunden,
+    klappe: klappenModul.klappe,
+    initialisiert: klappenModul.initialisiert,
+    initialPosition: klappenModul.initialPosition,
+    initialPositionManuell: klappenModul.initialPositionManuell,
+    sensorObenMontiert: klappenModul.config.sensorObenMontiert,
+    sensorUntenMontiert: klappenModul.config.sensorUntenMontiert,
+    maxSekundenEinWeg: klappenModul.config.maxSekundenEinWeg,
+    korrekturSekunden: klappenModul.config.korrekturSekunden,
     skipGpio: skipGpio,
     bme280: bme280.status,
-    bewegungSumme: bewegungSumme(),
+    bewegungSumme: klappenModul.bewegungSumme(),
     //dht22: dht22.status,
     cpuTemp: cpuTemp.status,
     sensoren: sensoren,
@@ -500,40 +278,42 @@ app.get('/log', function (req, res) {
   });
 });
 app.get('/korrigiere/hoch', function (req, res) {
-  action = korrigiereHoch();
+  action = klappenModul.korrigiereHoch();
   res.send(action);
 });
 app.get('/korrigiere/runter', function (req, res) {
-  action = korrigiereRunter();
+  action = klappenModul.korrigiereRunter();
   res.send(action);
 });
 app.get('/kalibriere/:obenUnten', function (req, res) {
-  action = kalibriere(req.params.obenUnten);
+  action = klappenModul.kalibriere(req.params.obenUnten);
   res.send(action);
 });
 app.get('/hoch', function (req, res) {
-  action = klappeFahren("hoch",ganzeFahrtSek);
+  // TODO: GanzeFahrtSek in Klappenmodul ausgliedern
+  action = klappenModul.klappeFahren("hoch",ganzeFahrtSek);
   if(action.success != true) {
     res.status(403);
   }
   res.send(action);
 });
 app.get('/runter', function (req, res) {
-  action = klappeFahren("runter",ganzeFahrtSek);
+  // TODO: GanzeFahrtSek in Klappenmodul ausgliedern
+  action = klappenModul.klappeFahren("runter",ganzeFahrtSek);
   if(action.success != true) {
     res.status(403);
   }
   res.send(action);
 });
 app.get('/hoch/:wielange', function (req, res) {
-  action = klappeFahren("hoch",parseFloat(req.params.wielange));
+  action = klappenModul.klappeFahren("hoch",parseFloat(req.params.wielange));
   if(action.success != true) {
     res.status(403);
   }
   res.send(action);
 });
 app.get('/runter/:wielange', function (req, res) {
-  action = klappeFahren("runter",parseFloat(req.params.wielange));
+  action = klappenModul.klappeFahren("runter",parseFloat(req.params.wielange));
   if(action.success != true) {
     res.status(403);
   }
