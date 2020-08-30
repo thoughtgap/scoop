@@ -13,7 +13,16 @@ const fileLogConfig = {
 fileLog = SimpleNodeLogger.createRollingFileLogger(fileLogConfig);
 consoleLog = SimpleNodeLogger.createSimpleLogger();
 
+const validLogLevels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'];
+
 add = (message, type = "info") => {
+
+    if(!validLogLevels.includes(type)) {
+        fileLog.log('warn','Invalid Log Level '+type+ ' changed to warn');
+        consoleLog.log('warn','Invalid Log Level '+type+ ' changed to warn');
+        type = 'warn';
+    }
+
     let timestamp = moment();
     fileLog.log(type, message);
     consoleLog.log(type, message);
