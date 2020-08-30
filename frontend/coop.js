@@ -18,6 +18,7 @@ angular.module('todoApp', ['angularMoment'])
 
     $scope.setCameraUrl = () => {
       $scope.cameraUrl = coopUrl + 'cam/' + moment($scope.cameraTime).unix();
+      $scope.cameraUrlNightVision = coopUrl + 'nightvision/' + moment($scope.cameraTimeNightVision).unix();
     }
 
     $scope.getStatus = () => {
@@ -35,6 +36,7 @@ angular.module('todoApp', ['angularMoment'])
             $scope.coopStatusVonWann = new Date();
             
             $scope.cameraTime = $scope.coopStatus.camera.time;
+            $scope.cameraTimeNightVision = $scope.coopStatus.camera.ir.time;
             $scope.setCameraUrl();
 
           }, function errorCallback(response) {
@@ -116,6 +118,21 @@ angular.module('todoApp', ['angularMoment'])
           $scope.fahreStatus = response.data;
           $scope.fahreStatusVonWann = new Date();
         });
+    }
+
+    $scope.nachtsichten = () => {
+      let reqUrl = coopUrl + 'nightvision/new/';
+
+      $http({
+        method: 'GET',
+        url: reqUrl
+      }).then(function successCallback(response) {
+        $scope.nachtsichtStatus = response.data;
+        $scope.nachtsichtStatusVonWann = new Date();
+      }, function errorCallback(response) {
+        $scope.nachtsichtStatus = response.data;
+        $scope.nachtsichtStatusVonWann = new Date();
+      });
     }
 
 

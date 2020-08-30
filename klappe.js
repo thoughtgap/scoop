@@ -1,5 +1,5 @@
 var logging = require('./logging.js');
-var gpioMotor = require('./gpio-motor.js');
+var gpioMotor = require('./gpio-relais.js');
 
 var klappe = {
     status: "not initialized",

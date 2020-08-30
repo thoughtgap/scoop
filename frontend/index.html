@@ -197,7 +197,17 @@
   <div ng-controller="coopCtrl as coop">
     <div class="floaters">
       <h2>🐔 {{coopStatus.klappe.status}}<span ng-show="coopStatus.klappe.position">, {{coopStatus.klappe.position}}</span></h2>
+    </div>
+    <div class="floaters">
+      Bild von <time am-time-ago="cameraTime"></time>
       <a href="/camsvg" target="_blank"><img ng-src="{{cameraUrl}}"></a>
+        <a href="" ng-click="nachtsichten()">✨ neues Nachtsichtfoto aufnehmen</a>
+        <span ng-show="nachtsichtStatus.success == true">..erfolgreich angefragt <time am-time-ago="nachtsichtStatusVonWann"></time></span>
+        <span ng-show="nachtsichtStatus.success == false">..Fehler {{nachtsichtStatus.message}} <time am-time-ago="nachtsichtStatusVonWann"></time></span>
+      <span ng-show="cameraTimeNightVision">
+        Bild von <time am-time-ago="cameraTimeNightVision"></time>
+        <a ng-show="cameraTimeNightVision" href="/nightvisionsvg" target="_blank"><img ng-src="{{cameraUrlNightVision}}"></a>
+      </span>
     </div>
 
     <div class="floaters">

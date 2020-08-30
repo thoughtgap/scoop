@@ -17,15 +17,18 @@ const skipGpio = {
   "motor": config.skipGpio.motor,
   "dht22": config.skipGpio.dht22,
   "sensoren": config.skipGpio.sensoren,
-  "bme280": config.skipGpio.bme280
+  "bme280": config.skipGpio.bme280,
+  "ir": config.skipGpio.ir
 }
 
-var gpioMotor = require('./gpio-motor.js');
-gpioMotor.configure( config.gpioPorts.out.hoch,
+var gpioRelais = require('./gpio-relais.js');
+gpioRelais.configure( config.gpioPorts.out.hoch,
                 config.gpioPorts.out.runter,
+                config.gpioPorts.out.ir,
                 config.motorAus,
                 config.motorEin,
-                skipGpio.motor);
+                skipGpio.motor,
+                skipGpio.ir);
 
 if(!skipGpio.bme280) {
   logging.add("Initializing BME280 Temperature Sensor");
@@ -186,7 +189,7 @@ leseSensoren();
 
 function stoppeMotor() {
   if(klappenModul.klappe.status !== "angehalten") {
-    gpioMotor.stoppeMotor();
+    gpioRelais.stoppeMotor();
     klappenModul.setKlappenStatus("angehalten",null);
   }
   else {
@@ -219,7 +222,7 @@ function stoppeMotor() {
 klappenModul.init();
 
 var camera = require('./camera.js');
-
+camera.configure(config.camera.intervalSec, config.camera.maxAgeSec);
 
 // Hier kommt nun der ganze Server-Kram
 app.use(function(req, res, next) {
@@ -268,7 +271,11 @@ app.get('/status', function (req, res) {
       intervalSec: camera.data.intervalSec,
       maxAgeSec: camera.data.maxAgeSec,
       timeNextImage: camera.data.timeNextImage,
-      busy: camera.data.busy
+      busy: camera.data.busy,
+      ir: {
+        time: camera.data.ir.time,
+        lastRequest: camera.data.ir.lastRequest
+      }
     }
   });
 });
@@ -327,8 +334,13 @@ app.get('/reset', function (req, res) {
     res.send("modified test.json");
 });
 app.get('/cam/new', function (req, res) {
-  camera.takePhoto(true);
-  res.send({message:"foto in auftrag gegeben. abholen unter /cam"});
+  let takeIt = camera.takePhoto(true,false);
+  if(takeIt == true) {
+    res.send({success:true,message:"foto in auftrag gegeben. abholen unter /cam"});
+  }
+  else {
+    res.send({success:false,message:"foto nicht in auftrag gegeben - " + takeIt});
+  }
 });
 app.get('/cam/:timestamp?', function (req, res) {
   if(camera.getJpg()) {
@@ -338,6 +350,28 @@ app.get('/cam/:timestamp?', function (req, res) {
   else {
     res.send({message:"geht nicht"});
   }
+});
+app.get('/nightvision/new', function (req, res) {
+  let takeIt = camera.takePhoto(true,true);
+  if(takeIt == true) {
+    res.send({success:true,message:"nacht-foto in auftrag gegeben. abholen unter /nightvision"});
+  }
+  else {
+    res.send({success:false,message:"nacht-foto nicht in auftrag gegeben - " + takeIt});
+  }
+});
+app.get('/nightvision/:timestamp?', function (req, res) {
+  if(camera.getIRJpg()) {
+    res.contentType('image/jpeg');
+    res.send(camera.getIRJpg());
+  }
+  else {
+    res.send({message:"Kein IR Foto. Bitte per /nightvision/new eins aufnehmen."});
+  }
+});
+app.get('/nightvisionsvg/:timestamp?', function (req, res) {
+  res.contentType('image/svg+xml');
+  res.send(camera.getSvg("nightvision"));
 });
 app.get('/camsvg/:timestamp?', function (req, res) {
     res.contentType('image/svg+xml');
