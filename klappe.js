@@ -107,12 +107,10 @@ const manuelleInitialPosition = (pos) => {
 
 const korrigiereHoch = () => {
     logging.add("Korrigiere hoch");
-    // TODO Akzeptiert er nicht mehr, weil die neue Position out of bounds wäre.
     return klappeFahren("hoch", config.korrekturSekunden, true);
 };
 const korrigiereRunter = () => {
     logging.add("Korrigiere runter");
-    // TODO Akzeptiert er nicht mehr, weil die neue Position out of bounds wäre.
     return klappeFahren("runter", config.korrekturSekunden, true);
 };
 
@@ -122,14 +120,21 @@ const klappeFahren = (richtung, sekunden, korrektur = false) => {
         message: ""
     }
 
-    fahrtWert = null;
-    if (richtung == "hoch") {
-        fahrtWert = 1;
+    if(richtung != "hoch" && richtung != "runter") {
+        logging.add("klappe.klappeFahren() - Invalid parameter (hoch/runter)",'warn');
+        return false;
     }
-    else if (richtung == "runter") {
-        fahrtWert = -1;
+
+    fahrtWert = 0;
+    if(korrektur != true) {
+        if (richtung == "hoch") {
+            fahrtWert = 1;
+        }
+        else if (richtung == "runter") {
+            fahrtWert = -1;
+        }
+        fahrtWert = fahrtWert * sekunden
     }
-    fahrtWert = fahrtWert * sekunden
     neuePosition = klappe.positionNum + fahrtWert;
 
 
@@ -155,11 +160,7 @@ const klappeFahren = (richtung, sekunden, korrektur = false) => {
     }
     else if ((!initialisiert && sekunden <= config.korrekturSekunden) || initialisiert) {
 
-
         // Überprüfe ob die Fahrt zulässig ist (nicht zu weit hoch/runter)
-        // klappe.hochSek
-        // klappe.runterSek
-
         if (Math.abs(neuePosition) > config.ganzeFahrtSek || neuePosition < 0 || neuePosition > config.ganzeFahrtSek) {
             response.message = `HALLO FALSCH DA REISST DER FADEN! klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`;
             logging.add(response.message);
@@ -196,7 +197,10 @@ const klappeFahren = (richtung, sekunden, korrektur = false) => {
                 else if (richtung == "runter") {
                     klappe.runterSek += sekunden;
                 }
-                klappe.positionNum += fahrtWert;
+
+                if(!korrektur) {
+                    klappe.positionNum += fahrtWert;
+                }
 
                 logging.add(`sekunden: ${sekunden}, ganzeFahrtSek: ${config.ganzeFahrtSek}, positionNum: ${klappe.positionNum}, richtung: ${richtung}, bool: ${(sekunden >= config.ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == config.ganzeFahrtSek)}`);
 
@@ -214,7 +218,7 @@ const klappeFahren = (richtung, sekunden, korrektur = false) => {
     }
     else {
         response.message = `klappe ${richtung}: ${sekunden} geht nicht. Grund nicht erkennbar.`;
-        logging.add(response.message);
+        logging.add(response.message,'warn');
         response.success = false;
     }
 
@@ -244,7 +248,6 @@ kalibriere = (obenUnten) => {
     logging.add(message);
     return { success: true, message: message };
 }
-
 
 exports.configure = configure;
 exports.init = init;
