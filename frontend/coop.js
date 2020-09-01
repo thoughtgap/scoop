@@ -66,10 +66,12 @@ angular.module('todoApp', ['angularMoment'])
       }).then(function successCallback(response) {
           $scope.kalibriereStatus = response.data;
           $scope.kalibriereStatusVonWann = new Date();
+          $scope.getStatus();
         }, function errorCallback(response) {
           alert("Fehler beim Kalibrieren: "+ response);
           $scope.kalibriereStatus = response.data;
           $scope.kalibriereStatusVonWann = new Date();
+          $scope.getStatus();
         });
     }
 
