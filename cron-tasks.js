@@ -120,7 +120,7 @@ const setupHatchCronjobs = () => {
             
         }
         else {
-            logging.add("Invalid Cronjob time "+time,"warn")
+            logging.add("Invalid Cronjob time "+newJob.time,"warn")
         }
 
         if(h !== null && m !== null) {
