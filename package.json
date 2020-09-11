@@ -6,7 +6,8 @@
   "scripts": {
     "tsc": "tsc",
     "dev": "node node_modules/nodemon/bin/nodemon.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "pm2 start stall.js"
   },
   "repository": {
     "type": "git",
@@ -19,10 +20,20 @@
   },
   "homepage": "https://github.com/thoughtgap/schicke-chicks#readme",
   "dependencies": {
+    "bme280": "^2.1.0",
+    "cron": "^1.8.2",
     "express": "^4.17.1",
+    "heapdump": "^0.3.15",
     "moment": "^2.27.0",
-    "node-dht-sensor": "^0.4.2",
+    "node-dht-sensor": "^0.4.3",
+    "node-raspistill": "^1.0.1",
     "nodemon": "^2.0.4",
-    "onoff": "^6.0.0"
+    "onoff": "^6.0.0",
+    "pi-temperature": "^2.1.0",
+    "pm2": "^4.4.0",
+    "pngjs": "^5.0.0",
+    "request": "^2.88.2",
+    "simple-node-logger": "^18.12.24",
+    "suncalc": "^1.8.0"
   }
 }

@@ -38,5 +38,13 @@
   "camera": {
     "intervalSec": 20,
     "maxAgeSec": 10
-  } 
+  },
+  "location": {
+    "lat": 52, 
+    "lon": 8
+  },
+  "hatchAutomation": {
+    "openTimes": ["06:30","sunrise+30"],
+    "closeTimes": ["22:00","sunset-30"]
+  }
 }

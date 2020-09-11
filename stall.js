@@ -224,6 +224,9 @@ klappenModul.init();
 var camera = require('./camera.js');
 camera.configure(config.camera.intervalSec, config.camera.maxAgeSec);
 
+var cronTasks = require('./cron-tasks.js');
+cronTasks.configure(config.location, config.hatchAutomation);
+
 // Hier kommt nun der ganze Server-Kram
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
