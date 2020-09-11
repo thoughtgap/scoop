@@ -79,7 +79,7 @@ takePhoto = (force = false, nightVision = false) => {
         }
         camera.busy = false;
         
-        logging.add(`Took a ${nightVision ? "night vision" : ""} picture`);
+        logging.add(`Took a ${nightVision ? "night vision " : ""}picture`);
 
         if(nightVision && !gpioRelais.setNightVision(false)) {
           logging.add("Error when turning night vision off","warn");
