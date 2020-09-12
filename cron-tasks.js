@@ -20,7 +20,7 @@ configure = (location, hatchAutomation) => {
     cronConfig.hatchAutomation.openTimes = hatchAutomation.openTimes;
     cronConfig.hatchAutomation.closeTimes = hatchAutomation.closeTimes;
 
-    logging.add("CronJob Configure: "+
+    logging.add("Cronjob Configure: "+
         "  Location " + cronConfig.location.lat + "," + cronConfig.location.lon + 
         "  Hatch openTimes " + cronConfig.hatchAutomation.openTimes.toString() +
         "  Hatch closeTimes " + cronConfig.hatchAutomation.closeTimes.toString()
@@ -35,7 +35,7 @@ hatchCronjobs = [];
 var schedulerCronjob = new CronJob('0 1 0 * * *', function() {
     // This Job will run at 00:01 every night and reschedule all cronjobs.
     // This is necessary to keep sunrise/-set based cronjobs up to date.
-    logging.add("Nightly rescheduling of the hatch Cronjobs");
+    logging.add("Cronjobs: Nightly rescheduling");
     setupHatchCronjobs();
  },null);
  schedulerCronjob.start();
@@ -45,7 +45,7 @@ const setupHatchCronjobs = () => {
     
     // Properly unregister/stop the previous cronjobs
     if(hatchCronjobs.length > 0) {
-        logging.add(`Unregistering ${hatchCronjobs.length} old Cronjobs`);
+        logging.add(`Cronjobs: Unregistering ${hatchCronjobs.length} old Cronjobs`);
         hatchCronjobs.forEach(cronjob => {
             cronjob.stop();
             cronjob = null;
@@ -54,7 +54,7 @@ const setupHatchCronjobs = () => {
     }
 
 
-    logging.add("Setup Hatch Cronjobs");
+    logging.add("Cronjobs: Set up Setup Hatch Cronjobs");
     let cronjobsToConfigure = [];
 
     cronConfig.hatchAutomation.openTimes.forEach(openingTime => {
@@ -109,18 +109,18 @@ const setupHatchCronjobs = () => {
                 }
                 else {
                     // TODO: Add Error logging, that suncalcObj could not be determined (wrong location?)
-                    logging.add("Could not determine Suncalc-Date. Invalid Location?","warn")
+                    logging.add("Cronjob Setup failed. Could not determine Suncalc-Date. Invalid Location?","warn")
 
                 }
             }
             else {
-                logging.add("Please specificy location.lat and .lon in the config to use sun related timings","warn")
+                logging.add("Cronjob Setup failed. Please specificy location.lat and .lon in the config to use sun related timings","warn")
             }
 
             
         }
         else {
-            logging.add("Invalid Cronjob time "+newJob.time,"warn")
+            logging.add("Cronjob Setup failed. Invalid time "+newJob.time,"warn")
         }
 
         if(h !== null && m !== null) {
@@ -132,7 +132,7 @@ const setupHatchCronjobs = () => {
                                │ │    └─────────── Hours: 0-23
                                │ └──────────────── Minutes: 0-59
                                └────────────────── Seconds: 0-59 */
-            logging.add("Setting " + cronPattern.padEnd(15) + newJob.action + " up for " + newJob.time);
+            logging.add("Cronjob Scheduling " + cronPattern.padEnd(15) + newJob.action + " up for " + h + ":" + "m" + " - " + + newJob.time);
 
             hatchCronjobs.push(new CronJob(cronPattern, function () {
                 // TODO: Actually do something instead of sending stupid ding dong messages
@@ -140,7 +140,7 @@ const setupHatchCronjobs = () => {
             }, null, true));
         }
         else {
-            logging.add("Skipping " + newJob.action + " " + newJob.time + " INVALID CRON PATTERN","warn");
+            logging.add("Cronjob Setup failed: " + newJob.action + " " + newJob.time + " INVALID CRON PATTERN","warn");
         }
     });
 };
