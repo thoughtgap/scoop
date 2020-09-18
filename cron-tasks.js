@@ -132,7 +132,7 @@ const setupHatchCronjobs = () => {
                                │ │    └─────────── Hours: 0-23
                                │ └──────────────── Minutes: 0-59
                                └────────────────── Seconds: 0-59 */
-            logging.add("Cronjob Scheduling " + cronPattern.padEnd(15) + newJob.action + " up for " + h + ":" + "m" + " - " + + newJob.time);
+            logging.add("Cronjob Scheduling " + cronPattern.padEnd(15) + newJob.action.padEnd(6) + " up for " + (h<10 ? '0' : '') +h + ":" + (m<10 ? '0' : '') + m + " - " + newJob.time);
 
             hatchCronjobs.push(new CronJob(cronPattern, function () {
                 // TODO: Actually do something instead of sending stupid ding dong messages
