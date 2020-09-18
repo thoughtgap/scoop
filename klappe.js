@@ -188,8 +188,8 @@ const klappeFahren = (richtung, sekunden, korrektur = false) => {
 
             // Motor später wieder abschalten
             setTimeout(function motorSpaeterAnhalten() {
-                stoppeMotor();
-
+                stoppeKlappe();
+                
                 // Merke wieviel hoch/runter gefahren
                 if (richtung == "hoch") {
                     klappe.hochSek += sekunden;
@@ -224,6 +224,11 @@ const klappeFahren = (richtung, sekunden, korrektur = false) => {
 
     return response;
 };
+
+stoppeKlappe = () => {
+    gpioMotor.stoppeMotor();
+    setKlappenStatus("angehalten",null);
+}
 
 bewegungSumme = () => {
     return klappe.hochSek - klappe.runterSek;
@@ -262,3 +267,4 @@ exports.kalibriere = kalibriere;
 exports.klappeFahren = klappeFahren;
 exports.korrigiereRunter = korrigiereRunter;
 exports.korrigiereHoch = korrigiereHoch;
+exports.stoppeKlappe = stoppeKlappe;

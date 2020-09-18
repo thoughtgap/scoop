@@ -71,7 +71,7 @@ klappenModul.configure(
   skipGpio
 );
 
-stoppeMotor();
+klappenModul.stoppeKlappe();
 logging.add("Motor initialisiert");
 
 sensoren = {
@@ -131,7 +131,7 @@ function sensorObenWert(value,err) {
     // Wenn der Motor gerade hoch fährt,
     // und der Sensor betätigt wird, halte den Motor an.
     if(value == 0) {
-      stoppeMotor();
+      klappenModul.stoppeKlappe();
     }
   }
   sensoren.sensorOben.time = new Date();
@@ -150,7 +150,7 @@ function sensorUntenWert(value,err) {
     // Wenn der Motor gerade runter fährt,
     // und der Sensor betätigt wird, halte den Motor an.
     if(value == 0) {
-      stoppeMotor();
+      klappenModul.stoppeKlappe();
     }
   }
   sensoren.sensorUnten.time = new Date();
@@ -187,15 +187,15 @@ function leseSensoren() {
 }
 leseSensoren();
 
-function stoppeMotor() {
-  if(klappenModul.klappe.status !== "angehalten") {
-    gpioRelais.stoppeMotor();
-    klappenModul.setKlappenStatus("angehalten",null);
-  }
-  else {
-    logging.add("Skip stoppeMotor, klappe.status == angehalten.");
-  }  
-}
+// function stoppeMotor() {
+//   if(klappenModul.klappe.status !== "angehalten") {
+//     gpioRelais.stoppeMotor();
+//     klappenModul.setKlappenStatus("angehalten",null);
+//   }
+//   else {
+//     logging.add("Skip stoppeMotor, klappe.status == angehalten.");
+//   }  
+// }
 
 // function setSensorMontiert(pos,boo) {
 //   // !TODO
