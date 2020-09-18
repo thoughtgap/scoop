@@ -32,8 +32,8 @@ readBME280 = () => {
             await sensor.close();
             status.busy = false;
             status.time = new moment();
-            logging.add(`BME280 temperature ${status.values.temperature} pressure ${status.values.pressure} humidity ${status.values.humidity}`);
-            logging.thingspeakLog("field1="+status.values.temperature+"&field2="+status.values.pressure+"&field3="+status.values.humidity);
+            logging.add(`BME280 temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`);
+            logging.thingspeakLog("field1="+status.values.temperature.toFixed(2)+"&field2="+status.values.pressure.toFixed(2)+"&field3="+status.values.humidity.toFixed(2));
 
             if(status.intervalSec) {
                 setTimeout(function erneutLesen() {
