@@ -170,7 +170,7 @@ const klappeFahren = (richtung, sekunden, korrektur = false) => {
 
             // Klappe für x Sekunden
             response.success = true;
-            response.message = `klappe ${richtung}: für ${sekunden}s ${korrektur ? '(korrektur)' : ''}`;
+            response.message = `klappe ${richtung}: für ${sekunden}s ${korrektur ? `(korrektur nach hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek})` : ''}`;
             logging.add(response.message);
 
             // Starte den Motor jetzt.
