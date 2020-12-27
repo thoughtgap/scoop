@@ -196,7 +196,22 @@
 <body>
   <div ng-controller="coopCtrl as coop">
     <div class="floaters">
-      <h2>🐔 {{coopStatus.klappe.status}}<span ng-show="coopStatus.klappe.position">, {{coopStatus.klappe.position}}</span></h2>
+      <h2>
+        <span>
+          <a ng-click="getStatus()">🐔</a></span>
+        <span>{{coopStatus.klappe.status}}</span>
+        <span ng-show="coopStatus.klappe.position"> {{coopStatus.klappe.position}}</span>
+        <span ng-show="coopStatus.klappe.position === null">
+          <a href="" ng-click="klappeIst('oben')">ist oben</a> 
+          <a href="" ng-click="klappeIst('unten')">ist unten</a>
+        </span>
+        <span ng-show="coopStatus.klappe.position === 'oben'">
+          <a href="" ng-click="fahreKlappe('runter')">runter</a>
+        </span>
+        <span ng-show="coopStatus.klappe.position === 'unten'">
+          <a href="" ng-click="fahreKlappe('hoch')">hoch</a>
+        </span>
+      </h2>
     </div>
     <div class="floaters">
       Bild von <time am-time-ago="cameraTime"></time>
@@ -235,10 +250,10 @@
           title="{{coopStatus.klappe.previous.zeit}}"><time am-time-ago="coopStatus.klappe.previous.zeit"></time></a>
 
         <p>
-          <a href="#" ng-click="fahreKlappe('hoch')">Hoch fahren</a><br />
+          <a href="" ng-click="fahreKlappe('hoch')">Hoch fahren</a><br />
         </p>
         <p>
-          <a href="#" ng-click="fahreKlappe('runter')">Runter fahren</a><br />
+          <a href="" ng-click="fahreKlappe('runter')">Runter fahren</a><br />
         </p>
         <p>
           Success: {{fahreStatus.success}}<br />
@@ -281,8 +296,8 @@
     <div class="floaters">
       <h3>🛠 Initialisieren</h3>
       <p>
-        <a href="#" ng-click="klappeIst('oben')">Klappe ist jetzt oben</a><br />
-        <a href="#" ng-click="klappeIst('unten')">Klappe ist jetzt unten</a><br />
+        <a href="" ng-click="klappeIst('oben')">Klappe ist jetzt oben</a><br />
+        <a href="" ng-click="klappeIst('unten')">Klappe ist jetzt unten</a><br />
       <p>
         Success: {{kalibriereStatus.success}}<br />
         Message: {{kalibriereStatus.message}}<br />
@@ -291,8 +306,8 @@
       </p>
       <p>
 
-        <a href="#" ng-click="klappeKorrigieren('hoch')">Korrigiere etwas nach oben</a><br />
-        <a href="#" ng-click="klappeKorrigieren('runter')">Korrigiere etwas nach unten</a><br />
+        <a href="" ng-click="klappeKorrigieren('hoch')">Korrigiere etwas nach oben</a><br />
+        <a href="" ng-click="klappeKorrigieren('runter')">Korrigiere etwas nach unten</a><br />
       <p>
         Success: {{korrigierStatus.success}}<br />
         Message: {{korrigierStatus.message}}<br />
