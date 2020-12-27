@@ -2,6 +2,7 @@ var SunCalc = require('suncalc');
 var CronJob = require('cron').CronJob;
 var moment = require('moment'); // require
 var logging = require('./logging.js');
+var klappenModul = require('./klappe.js');
 
 const cronConfig = {
     "location": {
@@ -137,6 +138,20 @@ const setupHatchCronjobs = () => {
             hatchCronjobs.push(new CronJob(cronPattern, function () {
                 // TODO: Actually do something instead of sending stupid ding dong messages
                 logging.add("Cronjob Run - Ding dong Cronjob Fired!! - " + newJob.action + " @ " + newJob.time);
+
+                if(newJob.action === "open") {
+                    action = klappenModul.klappeFahren("hoch",null,false);
+                    if(action.success != true) {
+                        console.log("Cronjob RUn - Das hat nicht geklappt.");
+                    }
+                }
+                else if(newJob.action === "close") {
+                    action = klappenModul.klappeFahren("runter",null,false);
+                    if(action.success != true) {
+                        console.log("Cronjob RUn - Das hat nicht geklappt.");
+                    }
+                }
+
             }, null, true));
         }
         else {

@@ -114,10 +114,14 @@ const korrigiereRunter = () => {
     return klappeFahren("runter", config.korrekturSekunden, true);
 };
 
-const klappeFahren = (richtung, sekunden, korrektur = false) => {
+const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
     let response = {
         success: false,
         message: ""
+    }
+
+    if(sekunden === null) {
+        sekunden = config.ganzeFahrtSek;
     }
 
     if(richtung != "hoch" && richtung != "runter") {
