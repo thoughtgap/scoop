@@ -40,6 +40,18 @@ if(!skipGpio.bme280) {
 else {
   logging.add("Skipping BME280 Temperature Sensor");
 }
+getTemperature = () => {
+  if(!skipGpio.bme280) {
+    return bme280.status.values.temperature;
+  }
+  return null;
+}
+getHumidity = () => {
+  if(!skipGpio.bme280) {
+    return bme280.status.values.humidity;
+  }
+  return null;
+}
 
 if(!skipGpio.dht22) {
   logging.add("Initializing DHT22 Temperature Sensor");
