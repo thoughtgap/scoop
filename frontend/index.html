@@ -162,7 +162,6 @@
 
     h2 {
       font-size: 56px;
-      text-align: center;
       padding: 5px;
     }
 
@@ -170,6 +169,10 @@
       font-size: 24px;
       font-weight: bold;
       margin-bottom: 10px;
+    }
+
+    .center {
+      text-align: center;
     }
 
     pre {
@@ -196,9 +199,10 @@
 <body>
   <div ng-controller="coopCtrl as coop">
     <div class="floaters">
-      <h2>
+      <h2 class="center">
         <span>
-          <a ng-click="getStatus()">🐔</a></span>
+          <a ng-click="getStatus()">🐔</a>
+        </span>
         <span>{{coopStatus.klappe.status}}</span>
         <span ng-show="coopStatus.klappe.position"> {{coopStatus.klappe.position}}</span>
         <span ng-show="coopStatus.klappe.position === null">
@@ -212,6 +216,10 @@
           <a href="" ng-click="fahreKlappe('hoch')">hoch</a>
         </span>
       </h2>
+      <h3 class="center">
+        {{coopStatus.bme280.values.temperature | number : 1}}°C &nbsp;&nbsp;&nbsp;
+        {{coopStatus.bme280.values.humidity | number : 0}}%
+      </h3>
     </div>
     <div class="floaters">
       Bild von <time am-time-ago="cameraTime"></time>
@@ -268,9 +276,12 @@
       <div>
         <p>
           Temperatur: {{coopStatus.bme280.values.temperature | number : 1}}°C<br />
+          Min {{coopStatus.bme280.daily.min.temperature | number : 1}}°C <time am-time-ago="coopStatus.bme280.daily.min.temperatureTime"></time><br />
+          Max {{coopStatus.bme280.daily.max.temperature | number : 1}}°C <time am-time-ago="coopStatus.bme280.daily.max.temperatureTime"></time>
+        </p>
+        <p>
           Luftdruck: {{coopStatus.bme280.values.pressure | number : 0}}hpa<br />
-          Luftfeuchtigkeit: {{coopStatus.bme280.values.humidity | number : 0}}% <time
-            am-time-ago="coopStatus.bme280.time"></time><br />
+          Luftfeuchtigkeit: {{coopStatus.bme280.values.humidity | number : 0}}% <time am-time-ago="coopStatus.bme280.time"></time><br />
         </p>
         <p>
           CPU: {{coopStatus.cpuTemp.values.temperature}}°C (<time am-time-ago="coopStatus.cpu.time"></time>)
