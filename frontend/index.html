@@ -217,8 +217,25 @@
         </span>
       </h2>
       <h3 class="center">
-        {{coopStatus.bme280.values.temperature | number : 1}}°C &nbsp;&nbsp;&nbsp;
+        {{coopStatus.bme280.values.temperature | number : 1}}°C
+
+        <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'up'">
+          ↗
+        </span>
+        <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'down'">
+          ↘
+        </span>
+        <!-- <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'same'">
+          →
+        </span> -->
+        &nbsp;&nbsp;&nbsp;
         {{coopStatus.bme280.values.humidity | number : 0}}%
+        <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'up'">
+          ↗
+        </span>
+        <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'down'">
+          ↘
+        </span>
       </h3>
     </div>
     <div class="floaters">
@@ -275,13 +292,32 @@
       <h3>📟 Sensoren</h3>
       <div>
         <p>
-          Temperatur: {{coopStatus.bme280.values.temperature | number : 1}}°C<br />
+          Temperatur: {{coopStatus.bme280.values.temperature | number : 1}}°C 
+          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'up'">
+            ↗
+          </span>
+          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'down'">
+            ↘
+          </span>          
+          <br />
           Min {{coopStatus.bme280.daily.min.temperature | number : 1}}°C <time am-time-ago="coopStatus.bme280.daily.min.temperatureTime"></time><br />
           Max {{coopStatus.bme280.daily.max.temperature | number : 1}}°C <time am-time-ago="coopStatus.bme280.daily.max.temperatureTime"></time>
         </p>
         <p>
-          Luftdruck: {{coopStatus.bme280.values.pressure | number : 0}}hpa<br />
-          Luftfeuchtigkeit: {{coopStatus.bme280.values.humidity | number : 0}}% <time am-time-ago="coopStatus.bme280.time"></time><br />
+          Luftdruck: {{coopStatus.bme280.values.pressure | number : 0}}hpa
+          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.pressure == 'up'">
+            ↗
+          </span>
+          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.pressure == 'down'">
+            ↘
+          </span><br />
+          Luftfeuchtigkeit: {{coopStatus.bme280.values.humidity | number : 0}}%
+          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'up'">
+            ↗
+          </span>
+          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'down'">
+            ↘
+          </span> <time am-time-ago="coopStatus.bme280.time"></time><br />
         </p>
         <p>
           CPU: {{coopStatus.cpuTemp.values.temperature}}°C (<time am-time-ago="coopStatus.cpu.time"></time>)
