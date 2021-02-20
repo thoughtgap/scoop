@@ -57,8 +57,22 @@ readBME280 = () => {
             // Daily min/max values
             if(!moment().isSame(status.daily.day, 'day')) {
                 status.daily.day = moment();
-                status.daily.min = status.values;
-                status.daily.max = status.values;
+                status.daily.min = {
+                    temperature: null,
+                    pressure: null,
+                    humidity: null,
+                    temperatureTime: null,
+                    pressureTime: null,
+                    humidityTime: null
+                };
+                status.daily.max = {
+                    temperature: null,
+                    pressure: null,
+                    humidity: null,
+                    temperatureTime: null,
+                    pressureTime: null,
+                    humidityTime: null
+                };
             }   
             //logging.add(`BME280 temperature isSame`);
             // Min
