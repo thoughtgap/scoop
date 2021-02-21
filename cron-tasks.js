@@ -15,6 +15,11 @@ const cronConfig = {
     }
 };
 
+let cronStatus = {
+    setup: null,
+    jobs: []
+}
+
 configure = (location, hatchAutomation) => {
     cronConfig.location.lat = parseFloat(location.lat);
     cronConfig.location.lon = parseFloat(location.lon);
@@ -43,6 +48,9 @@ var schedulerCronjob = new CronJob('0 1 0 * * *', function() {
 
 
 const setupHatchCronjobs = () => {
+
+    cronStatus.setup = moment();
+    cronStatus.jobs = [];
     
     // Properly unregister/stop the previous cronjobs
     if(hatchCronjobs.length > 0) {
@@ -134,6 +142,12 @@ const setupHatchCronjobs = () => {
                                │ └──────────────── Minutes: 0-59
                                └────────────────── Seconds: 0-59 */
             logging.add("Cronjob Scheduling " + cronPattern.padEnd(15) + newJob.action.padEnd(6) + " up for " + (h<10 ? '0' : '') +h + ":" + (m<10 ? '0' : '') + m + " - " + newJob.time);
+            cronStatus.jobs.push({
+                //cronPattern: cronPattern,
+                time: (h<10 ? '0' : '')+h+':'+(m<10 ? '0' : '')+m,
+                command: newJob.time,
+                action: newJob.action
+            });
 
             hatchCronjobs.push(new CronJob(cronPattern, function () {
                 // TODO: Actually do something instead of sending stupid ding dong messages
@@ -148,7 +162,7 @@ const setupHatchCronjobs = () => {
                 else if(newJob.action === "close") {
                     action = klappenModul.klappeFahren("runter",null,false);
                     if(action.success != true) {
-                        console.log("Cronjob RUn - Das hat nicht geklappt.");
+                        console.log("Cronjob Run - Das hat nicht geklappt.");
                     }
                 }
 
@@ -161,3 +175,4 @@ const setupHatchCronjobs = () => {
 };
 
 exports.configure = configure;
+exports.status = cronStatus;

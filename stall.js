@@ -9,6 +9,7 @@ var moment = require('moment');
 var logging = require('./logging.js');
 
 let config = require('./config.json');
+const bootTimestamp = moment();
 logging.thingspeakSetAPIKey(config.thingspeakAPI);
 
 const ganzeFahrtSek = config.ganzeFahrtSek;
@@ -283,7 +284,9 @@ app.get('/status', function (req, res) {
         lastRequest: camera.data.ir.lastRequest
       },
       statistics: camera.data.statistics
-    }
+    },
+    cron: cronTasks.status,
+    booted: bootTimestamp
   });
 });
 app.get('/log', function (req, res) {

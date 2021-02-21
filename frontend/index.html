@@ -190,6 +190,7 @@
       width: 100%;
       height: auto;
     }
+
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="coop.js"></script>
@@ -254,6 +255,7 @@
           <span ng-show="!coopStatusLaedt">Neu laden</span>
           <span ng-show="coopStatusLaedt">Lädt gerade</span>
         </a> (zuletzt <time am-time-ago="coopStatusVonWann"></time>)<br />
+        Gebooted: <time am-time-ago="coopStatus.booted"></time><br />
       </div>
     </div>
 
@@ -284,8 +286,13 @@
         </p>
 
         <p>
-          Automatisierung
-          
+          <h3>Automatisierung</h3>
+          <ul>
+            <li ng-repeat="job in coopStatus.cron.jobs">
+              {{job.action == 'open' ? 'Öffnen' : 'Schließen'}} um {{job.time}} <span ng-show="job.time != job.command">({{job.command}})</span>
+            </li>
+          </ul>
+          Eingeplant <time am-time-ago="coopStatus.cron.setup"></time>
         </p>
       </div>
     </div>
