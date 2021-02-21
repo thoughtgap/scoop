@@ -199,15 +199,6 @@ function leseSensoren() {
 }
 leseSensoren();
 
-// function stoppeMotor() {
-//   if(klappenModul.klappe.status !== "angehalten") {
-//     gpioRelais.stoppeMotor();
-//     klappenModul.setKlappenStatus("angehalten",null);
-//   }
-//   else {
-//     logging.add("Skip stoppeMotor, klappe.status == angehalten.");
-//   }  
-// }
 
 // function setSensorMontiert(pos,boo) {
 //   // !TODO
@@ -234,7 +225,7 @@ leseSensoren();
 klappenModul.init();
 
 var camera = require('./camera.js');
-camera.configure(config.camera.intervalSec, config.camera.maxAgeSec);
+camera.configure(config.camera.intervalSec, config.camera.maxAgeSec, config.camera.autoTakeMin);
 
 var cronTasks = require('./cron-tasks.js');
 cronTasks.configure(config.location, config.hatchAutomation);
@@ -290,7 +281,8 @@ app.get('/status', function (req, res) {
       ir: {
         time: camera.data.ir.time,
         lastRequest: camera.data.ir.lastRequest
-      }
+      },
+      statistics: camera.data.statistics
     }
   });
 });

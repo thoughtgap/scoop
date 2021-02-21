@@ -225,9 +225,6 @@
         <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'down'">
           ↘
         </span>
-        <!-- <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'same'">
-          →
-        </span> -->
         &nbsp;&nbsp;&nbsp;
         {{coopStatus.bme280.values.humidity | number : 0}}%
         <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'up'">
@@ -284,6 +281,11 @@
           Success: {{fahreStatus.success}}<br />
           Message: {{fahreStatus.message}}<br />
           <time am-time-ago="fahreStatusVonWann"></time>
+        </p>
+
+        <p>
+          Automatisierung
+          
         </p>
       </div>
     </div>
@@ -372,6 +374,7 @@
         IntervalSec: {{coopStatus.camera.intervalSec}}<br />
         maxAgeSec: {{coopStatus.camera.maxAgeSec}}<br />
         busy: {{coopStatus.camera.busy}}<br />
+        Aufnahmedauer: Ø {{coopStatus.camera.statistics.avg}}, min {{coopStatus.camera.statistics.min}}s, max {{coopStatus.camera.statistics.max}}s ({{coopStatus.camera.statistics.pics}} Bilder)
       </p>
     </div>
 

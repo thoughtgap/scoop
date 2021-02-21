@@ -14,6 +14,12 @@ var camera = {
       on: null,
       time: null,
       image: null
+    },
+    statistics: {
+      avg: null,
+      min: null,
+      max: null,
+      pics: null
     }
 };
 
@@ -28,16 +34,20 @@ var cameraConfig = {
     }
 }
 
+var cameraTimeStats = [];
+
 const Raspistill = require('node-raspistill').Raspistill;
 const cam = new Raspistill(cameraConfig.raspistill);
 
-configure = (intervalSec, maxAgeSec) => {
+configure = (intervalSec, maxAgeSec, autoTakeMin) => {
     camera.intervalSec = intervalSec;
     camera.maxAgeSec = maxAgeSec;
+    camera.autoTakeMin = autoTakeMin
     
     logging.add("Camera Configure: "+
         "  intervalSec " + camera.intervalSec + 
-        "  maxAgeSec " + camera.maxAgeSec
+        "  maxAgeSec " + camera.maxAgeSec + 
+        "  autoTakeMin " + camera.autoTakeMin
     );
 
     gpioRelais.setNightVision(false);
@@ -62,7 +72,8 @@ takePhoto = (force = false, nightVision = false) => {
       }
 
       camera.busy = true;
-      logging.add("Taking a "+ (nightVision ? "night vision" : "") +" picture");
+      logging.add("Taking a"+ (nightVision ? " night vision" : "") +" picture");
+      let takingPicture = moment();
 
       cam.takePhoto().then((photo) => {
 
@@ -78,8 +89,18 @@ takePhoto = (force = false, nightVision = false) => {
           camera.timeNextImage.setSeconds(camera.timeNextImage.getSeconds() + camera.maxAgeSec);
         }
         camera.busy = false;
-        
-        logging.add(`Took a ${nightVision ? "night vision " : ""}picture`);
+
+        let tookPicture = moment();
+        let duration = tookPicture.diff(takingPicture);
+        cameraTimeStats.push(duration);
+        logging.add(`Took a ${nightVision ? "night vision " : ""}picture - ${duration} ms`);
+
+        // Calculate statistics of the recordings
+        camera.statistics.avg = Math.round(cameraTimeStats.reduce((a,b) => (a+b)) / cameraTimeStats.length / 100) / 10;
+        camera.statistics.min = Math.round(Math.min.apply(null, cameraTimeStats) / 100) / 10;
+        camera.statistics.max = Math.round(Math.max.apply(null, cameraTimeStats) / 100) / 10;
+        camera.statistics.pics = cameraTimeStats.length;
+        logging.add(`Camera Statistics: ${camera.statistics.pics} pics, Avg ${camera.statistics.avg}s, Min ${camera.statistics.min}s, Max ${camera.statistics.max}s`);
 
         if(nightVision && !gpioRelais.setNightVision(false)) {
           logging.add("Error when turning night vision off","warn");
@@ -87,11 +108,12 @@ takePhoto = (force = false, nightVision = false) => {
 
         // Schedule taking the next picture (only non-night vision)
         if(camera.lastRequest && !nightVision) {
-          let diff = new moment().diff(camera.lastRequest);
-          logging.add(`Last picture is ${diff / 1000}s old`);
+
+          let takeUntil = camera.lastRequest.clone();
+          takeUntil.add(camera.autoTakeMin,'minutes');
     
-          if(diff < 5 * 60 * 1000) {
-            logging.add(`Taking another picture in ${camera.intervalSec}s until ${camera.lastRequest.format()}  +5min`);
+          if(moment() < takeUntil) {
+            logging.add(`Taking another picture in ${camera.intervalSec}s. Last Request ${camera.lastRequest.format('hh:mm:ss')}, taking for ${camera.autoTakeMin}min until ${takeUntil.format('hh:mm:ss')}`);
             setTimeout(function nextPicPls() {
               takePhoto();
             }, camera.intervalSec * 1000);
@@ -144,7 +166,11 @@ getSvg = (which = "normal") => {
           <g id="page">`
       if(cameraObj.image) {
         html += '<image overflow="visible" width="1296" height="972" xlink:href="'+ picUrl +'"/>';
-        html += '<text font-family="Arial, Helvetica, sans-serif" x="10" y="40" fill="white" font-size="30px">🐔 '+ moment(cameraObj.time).format("HH:mm:ss") + ' (' + moment(cameraObj.time).fromNow() /*+' - '+ new moment().diff(cameraObj.time)/1000 */ + ') ' + Math.round(getTemperature() * 10) /10 + '°C   ' + Math.round(getHumidity()) + '%</text>';
+        html += '<text font-family="Arial, Helvetica, sans-serif" x="10" y="40" fill="white" font-size="30px">';
+        html +=   '🐔 '+ moment(cameraObj.time).format("HH:mm:ss") + ' (' + moment(cameraObj.time).fromNow() /*+' - '+ new moment().diff(cameraObj.time)/1000 */ + ') '
+        html +=   Math.round(getTemperature() * 10) /10 + '°C   ';
+        html +=   Math.round(getHumidity()) + '%'
+        html += '</text>';
       }
       else {
         html += '<text x="10" y="500" fill="black" font-size="500px">🐔</text>';
@@ -182,7 +208,6 @@ getIRJpg = () => {
 
 getIRStatus = () => {
   camera.ir.on = gpioRelais.IRIsOn();
-  //camera.ir.time = new moment();
 }
 
 exports.data = camera;
