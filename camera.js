@@ -35,6 +35,7 @@ var cameraConfig = {
 }
 
 var cameraTimeStats = [];
+const cameraTimeStatsSince = moment();
 
 const Raspistill = require('node-raspistill').Raspistill;
 const cam = new Raspistill(cameraConfig.raspistill);
@@ -102,6 +103,13 @@ takePhoto = (force = false, nightVision = false) => {
         camera.statistics.pics = cameraTimeStats.length;
         logging.add(`Camera Statistics: ${camera.statistics.pics} pics, Avg ${camera.statistics.avg}s, Min ${camera.statistics.min}s, Max ${camera.statistics.max}s`);
 
+        // Purge Camera Statistics if the record gets too large
+        cameraStatisticsTreshold = 5000;
+        if(cameraTimeStats.length > cameraStatisticsTreshold) {
+          logging.add(`Camera Statistics: Purging (${cameraStatisticsTreshold} elements treshold reached after ${moment().diff(cameraTimeStatsSince,'days')} days)`);
+          cameraTimeStats = [];
+        }
+
         if(nightVision && !gpioRelais.setNightVision(false)) {
           logging.add("Error when turning night vision off","warn");
         }
@@ -113,7 +121,7 @@ takePhoto = (force = false, nightVision = false) => {
           takeUntil.add(camera.autoTakeMin,'minutes');
     
           if(moment() < takeUntil) {
-            logging.add(`Taking another picture in ${camera.intervalSec}s. Last Request ${camera.lastRequest.format('hh:mm:ss')}, taking for ${camera.autoTakeMin}min until ${takeUntil.format('hh:mm:ss')}`);
+            logging.add(`Taking another picture in ${camera.intervalSec}s. Last Request ${camera.lastRequest.format('HH:mm:ss')}, taking for ${camera.autoTakeMin}min until ${takeUntil.format('HH:mm:ss')}`);
             setTimeout(function nextPicPls() {
               takePhoto();
             }, camera.intervalSec * 1000);

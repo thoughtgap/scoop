@@ -255,6 +255,18 @@ app.get('/frontend/coop.js', function (req, res) {
 app.get('/frontend/chick.svg', function (req, res) {
   res.sendFile(__dirname + '/frontend/chick.svg');
 });
+app.get('/frontend/angular.min.js', function (req, res) {
+  res.sendFile(__dirname + '/frontend/angular.min.js');
+});
+app.get('/frontend/moment.min.js', function (req, res) {
+  res.sendFile(__dirname + '/frontend/moment.min.js');
+});
+app.get('/frontend/angular-moment.min.js', function (req, res) {
+  res.sendFile(__dirname + '/frontend/angular-moment.min.js');
+});
+app.get('/frontend/de.min.js', function (req, res) {
+  res.sendFile(__dirname + '/frontend/de.min.js');
+});
 
 app.get('/status', function (req, res) {
   res.send({
