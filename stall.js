@@ -362,7 +362,7 @@ app.get('/reset', function (req, res) {
     res.send("modified test.json");
 });
 app.get('/cam/new', function (req, res) {
-  let takeIt = camera.takePhoto(true,false);
+  let takeIt = camera.takePhoto(false);
   if(takeIt == true) {
     res.send({success:true,message:"foto in auftrag gegeben. abholen unter /cam"});
   }
@@ -380,12 +380,12 @@ app.get('/cam/:timestamp?', function (req, res) {
   }
 });
 app.get('/nightvision/new', function (req, res) {
-  let takeIt = camera.takePhoto(true,true);
+  let takeIt = camera.queueNightvision();
   if(takeIt == true) {
-    res.send({success:true,message:"nacht-foto in auftrag gegeben. abholen unter /nightvision"});
+    res.send({success:true,message:"nacht-foto kommt sofort. abholen unter /nightvision"});
   }
   else {
-    res.send({success:false,message:"nacht-foto nicht in auftrag gegeben - " + takeIt});
+    res.send({success:false,message:"nacht-foto wird als nächstes aufgenommen - " + takeIt});
   }
 });
 app.get('/nightvision/:timestamp?', function (req, res) {

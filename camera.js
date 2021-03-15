@@ -13,7 +13,8 @@ var camera = {
     ir: {
       on: null,
       time: null,
-      image: null
+      image: null,
+      queued: false
     },
     statistics: {
       avg: null,
@@ -55,9 +56,19 @@ configure = (intervalSec, maxAgeSec, autoTakeMin) => {
     getIRStatus();
 };
 
-takePhoto = (force = false, nightVision = false) => {
+queueNightvision = () => {
+  camera.ir.queued = true;
+  return this.takePhoto(true)
+}
+
+takePhoto = (nightVision = false) => {
     let now = new Date();
     let max = camera.timeNextImage;
+
+    // Check if nightvision pic is queued
+    if(camera.ir.queued) {
+      nightVision = true;
+    }
 
     if(now <= max && !nightVision) {
         logging.add("Not taking picture. Picture still good.");
@@ -84,6 +95,7 @@ takePhoto = (force = false, nightVision = false) => {
         if(nightVision) {
           camera.ir.image = photo;  
           camera.ir.time = new Date();
+          camera.ir.queued = false;
         }
         else {
           camera.timeNextImage = new Date();
@@ -91,6 +103,13 @@ takePhoto = (force = false, nightVision = false) => {
         }
         camera.busy = false;
 
+        // Turn off Infrared LEDs again
+        if(nightVision && !gpioRelais.setNightVision(false)) {
+          logging.add("Error when turning night vision off","warn");
+        }        
+
+
+        // Statistics about camera duration
         let tookPicture = moment();
         let duration = tookPicture.diff(takingPicture);
         cameraTimeStats.push(duration);
@@ -108,10 +127,6 @@ takePhoto = (force = false, nightVision = false) => {
         if(cameraTimeStats.length > cameraStatisticsTreshold) {
           logging.add(`Camera Statistics: Purging (${cameraStatisticsTreshold} elements treshold reached after ${moment().diff(cameraTimeStatsSince,'days')} days)`);
           cameraTimeStats = [];
-        }
-
-        if(nightVision && !gpioRelais.setNightVision(false)) {
-          logging.add("Error when turning night vision off","warn");
         }
 
         // Schedule taking the next picture (only non-night vision)
@@ -225,3 +240,4 @@ exports.takePhoto = takePhoto;
 exports.getSvg = getSvg;
 exports.getJpg = getJpg;
 exports.getIRJpg = getIRJpg;
+exports.queueNightvision = queueNightvision;
