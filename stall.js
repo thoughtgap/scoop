@@ -15,11 +15,12 @@ logging.thingspeakSetAPIKey(config.thingspeakAPI);
 const ganzeFahrtSek = config.ganzeFahrtSek;
 
 const skipGpio = {
-  "motor": config.skipGpio.motor,
-  "dht22": config.skipGpio.dht22,
-  "sensoren": config.skipGpio.sensoren,
-  "bme280": config.skipGpio.bme280,
-  "ir": config.skipGpio.ir
+  motor: config.skipGpio.motor,
+  dht22: config.skipGpio.dht22,
+  sensoren: config.skipGpio.sensoren,
+  bme280: config.skipGpio.bme280,
+  ir: config.skipGpio.ir,
+  shelly: config.skipGpio.shelly
 }
 
 var gpioRelais = require('./gpio-relais.js');
@@ -231,6 +232,10 @@ camera.configure(config.camera.intervalSec, config.camera.maxAgeSec, config.came
 var cronTasks = require('./cron-tasks.js');
 cronTasks.configure(config.location, config.hatchAutomation);
 
+var shelly = require('./shelly.js');
+shelly.configure(config.shelly.url, config.shelly.intervalSec);
+shelly.getShellyStatus();
+
 // Hier kommt nun der ganze Server-Kram
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -297,6 +302,7 @@ app.get('/status', function (req, res) {
       },
       statistics: camera.data.statistics
     },
+    shelly: shelly.status,
     cron: cronTasks.status,
     booted: bootTimestamp
   });
@@ -408,6 +414,22 @@ app.get('/heapdump', function (req, res) {
     res.send(`Heap dump written to ${filename}`);
   });
 });
+app.get('/shelly/inform/:onoff', function (req, res) {
+  shelly.setShellyRelayStatus(req.params.onoff);
+  res.send({'message':'Thanks for sending Shelly Status'});
+});
+app.get('/shelly/turn/:onoff', function (req, res) {
+  shelly.turnShellyRelay(req.params.onoff);
+  res.send({'message':'Turning Shelly on/off'});
+});
+app.get('/shelly/update', function (req, res) {
+  shelly.getShellyStatus(true);
+  res.send({'message':'Updating Shelly Status'});
+});
+
+
+
+
 app.listen(3000, function () {
   logging.add('listening on port 3000!');
 });

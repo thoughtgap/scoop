@@ -116,6 +116,11 @@ angular.module('todoApp', ['angularMoment'])
       }).then(function successCallback(response) {
           $scope.fahreStatus = response.data;
           $scope.fahreStatusVonWann = new Date();
+
+          // Lade in 10s erneut
+          setTimeout(function erneutLesen() {
+            $scope.getStatus();
+          }, 10 * 1000);
         }, function errorCallback(response) {
           $scope.fahreStatus = response.data;
           $scope.fahreStatusVonWann = new Date();
@@ -137,9 +142,38 @@ angular.module('todoApp', ['angularMoment'])
       });
     }
 
+    $scope.schalteLicht = (anAus) => {
+      if(anAus) {
+        reqUrl = coopUrl + 'shelly/turn/on';
+      }
+      else {
+        reqUrl = coopUrl + 'shelly/turn/off';
+      }
 
+      $http({
+        method: 'GET',
+        url: reqUrl
+      }).then(function successCallback(response) {
+        $scope.getStatus();
+      }, function errorCallback(response) {
+        $scope.getStatus();
+        alert("Fehler beim Licht schalten: "+ response);
+      });
+    }
 
+    $scope.getLichtStatus = (anAus) => {
+      reqUrl = coopUrl + 'shelly/update';
 
+      $http({
+        method: 'GET',
+        url: reqUrl
+      }).then(function successCallback(response) {
+        $scope.getStatus();
+      }, function errorCallback(response) {
+        $scope.getStatus();
+        alert("Fehler beim Licht updaten: "+ response);
+      });
+    }
 
     var todoList = this;
     todoList.todos = [

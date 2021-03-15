@@ -238,6 +238,15 @@
         <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'down'">
           ↘
         </span>
+
+        &nbsp;&nbsp;&nbsp;
+        <span ng-show="coopStatus.shelly.relay.ison">
+          💡 Licht ist an <a href="" ng-click="schalteLicht(false)">aus</a><br />
+        </span>
+        <span ng-show="!coopStatus.shelly.relay.ison">
+          🌌 Licht ist aus <a href="" ng-click="schalteLicht(true)">an</a><br />
+        </span>
+        
       </h3>
     </div>
     <div class="floaters">
@@ -298,6 +307,30 @@
           </ul>
           Eingeplant <time am-time-ago="coopStatus.cron.setup"></time>
         </p>
+      </div>
+    </div>
+    
+    <div class="floaters">
+      <h3>💡 Licht</h3>
+      <div>
+        Aktualisiert: <a title="{{coopStatus.shelly.time}}"><time am-time-ago="coopStatus.shelly.time"></time></a><br />
+        Status: {{coopStatus.shelly.relay.ison ? 'an' : 'aus'}}<br />
+        
+        <p>
+          <a href="" ng-click="schalteLicht(true)">Anschalten</a><br />
+        </p>
+        <p>
+          <a href="" ng-click="schalteLicht(false)">Ausschalten</a><br />
+        </p>
+        <p>
+          <a href="" ng-click="getLichtStatus()">Aktualisieren</a><br />
+        </p>
+        <!-- <p>
+          Success: {{fahreStatus.success}}<br />
+          Message: {{fahreStatus.message}}<br />
+          <time am-time-ago="fahreStatusVonWann"></time>
+        </p> -->
+
       </div>
     </div>
 
