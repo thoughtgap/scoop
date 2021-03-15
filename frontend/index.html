@@ -195,6 +195,10 @@
       height: auto;
     }
 
+    .nostyle {
+      text-decoration: none;
+    }
+
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="coop.js"></script>
@@ -206,7 +210,7 @@
     <div class="floaters">
       <h2 class="center">
         <span>
-          <a ng-click="getStatus()">🐔</a>
+          <a href="" class="nostyle" ng-click="getStatus()">🐔</a>
         </span>
         <span>{{coopStatus.klappe.status}}</span>
         <span ng-show="coopStatus.klappe.position"> {{coopStatus.klappe.position}}</span>
