@@ -31,3 +31,14 @@ You can maintain fixed times and times relative to `sunset`, `sunrise`, or any o
 }
 ```
 
+## Shelly Integration
+A Shelly v1 230V relay is used to control the light bulb inside the coop.
+It can be controlled from the coop:
+
+* `shelly/turn/on` turns the relay/bulb on
+* `shelly/turn/off` turns it off.
+
+In case the Shelly app/web interface is used, shelly also informs the coop if it was triggered by using *I/O URL actions*:
+
+| OUTPUT SWITCHED ON URL | `http://<coop>/shelly/inform/on` |
+| OUTPUT SWITCHED OFF URL | `http://<coop>/shelly/inform/off` | 
