@@ -1,6 +1,14 @@
 # schicke-chicks 🐔
 This is our smart chicken coop server. It is providing a web-based backend and (somewhat limited and hacky) frontend to control the coop's hatch and view its webcam and sensor data.
 
+- [schicke-chicks 🐔](#schicke-chicks-)
+  - [Hardware](#hardware)
+  - [Configuration File](#configuration-file)
+    - [Hatch Automation](#hatch-automation)
+  - [Web Endpoints](#web-endpoints)
+  - [`/events` Coop Event Stream](#events-coop-event-stream)
+  - [Shelly Integration](#shelly-integration)
+
 ## Hardware
 The control unit consists of:
 
@@ -31,14 +39,27 @@ You can maintain fixed times and times relative to `sunset`, `sunrise`, or any o
 }
 ```
 
+## Web Endpoints
+
+## `/events` Coop Event Stream
+A [server-sent events](https://www.npmjs.com/package/express-sse) (SSE) stream informing about things happening in the coop:
+* newWebcamPic
+* newWebcamPicIR
+* klappenStatus
+* klappenPosition
+* shellyRelayIsOn
+
+
 ## Shelly Integration
 A Shelly v1 230V relay is used to control the light bulb inside the coop.
 It can be controlled from the coop:
 
-* `shelly/turn/on` turns the relay/bulb on
+* `shelly/turn/on` turns the relay/bulb on.
 * `shelly/turn/off` turns it off.
+* `/shelly/update` can be used to poll the current Shelly state from its web endpoint.
 
 In case the Shelly app/web interface is used, shelly also informs the coop if it was triggered by using *I/O URL actions*:
 
 * OUTPUT SWITCHED ON URL: `http://<coop>/shelly/inform/on`
 * *OUTPUT SWITCHED OFF URL: `http://<coop>/shelly/inform/off`
+
