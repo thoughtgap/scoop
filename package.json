@@ -23,6 +23,7 @@
     "bme280": "^2.1.0",
     "cron": "^1.8.2",
     "express": "^4.17.1",
+    "express-sse": "^0.5.3",
     "heapdump": "^0.3.15",
     "moment": "^2.27.0",
     "node-dht-sensor": "^0.4.3",

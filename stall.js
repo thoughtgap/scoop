@@ -8,6 +8,8 @@ var moment = require('moment');
 
 var logging = require('./logging.js');
 
+var events = require('./events.js');
+
 let config = require('./config.json');
 const bootTimestamp = moment();
 logging.thingspeakSetAPIKey(config.thingspeakAPI);
@@ -415,7 +417,7 @@ app.get('/heapdump', function (req, res) {
   });
 });
 app.get('/shelly/inform/:onoff', function (req, res) {
-  shelly.setShellyRelayStatus(req.params.onoff);
+  shelly.setShellyRelayStatusOnOff(req.params.onoff);
   res.send({'message':'Thanks for sending Shelly Status'});
 });
 app.get('/shelly/turn/:onoff', function (req, res) {
@@ -427,8 +429,7 @@ app.get('/shelly/update', function (req, res) {
   res.send({'message':'Updating Shelly Status'});
 });
 
-
-
+app.get('/events', events.sse.init);
 
 app.listen(3000, function () {
   logging.add('listening on port 3000!');

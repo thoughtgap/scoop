@@ -1,6 +1,7 @@
 var logging = require('./logging.js');
 var moment = require('moment');
 var gpioRelais = require('./gpio-relais.js');
+var events = require('./events.js');
 
 var camera = {
     image: null,
@@ -35,9 +36,11 @@ var cameraConfig = {
     }
 }
 
+// Statistics Objects
 var cameraTimeStats = [];
 const cameraTimeStatsSince = moment();
 
+// Camera Objects
 const Raspistill = require('node-raspistill').Raspistill;
 const cam = new Raspistill(cameraConfig.raspistill);
 
@@ -89,12 +92,14 @@ takePhoto = (nightVision = false) => {
 
       cam.takePhoto().then((photo) => {
 
+        newPicTime = new Date();
+
         camera.image = photo;  
-        camera.time = new Date();
+        camera.time = newPicTime;
 
         if(nightVision) {
           camera.ir.image = photo;  
-          camera.ir.time = new Date();
+          camera.ir.time = newPicTime;
           camera.ir.queued = false;
         }
         else {
@@ -106,8 +111,10 @@ takePhoto = (nightVision = false) => {
         // Turn off Infrared LEDs again
         if(nightVision && !gpioRelais.setNightVision(false)) {
           logging.add("Error when turning night vision off","warn");
-        }        
-
+        }
+        
+        // Push new Webcam pictures via sse
+        events.send('newWebcamPic'+(nightVision ? 'IR' : ''),newPicTime);
 
         // Statistics about camera duration
         let tookPicture = moment();
@@ -241,3 +248,4 @@ exports.getSvg = getSvg;
 exports.getJpg = getJpg;
 exports.getIRJpg = getIRJpg;
 exports.queueNightvision = queueNightvision;
+//exports.sse = sse;

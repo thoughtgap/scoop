@@ -1,26 +1,23 @@
 var logging = require('./logging.js');
 var moment = require('moment');
 const request = require('request');
+var events = require('./events.js');
 
-var status = {
+let status = {
     busy: false,
     time: null,
     relay: {
         ison: null,
-        has_timer: null,
-        timer_started: null,
-        timer_duration: null,
-        timer_remaining: null,
-        source: null
     },
-    intervalSec: null
+    intervalSec: null,
+    source: null
 }
 
 var config = {
     url: null,
 }
 
-configure = (url, intervalSec) => {
+const configure = (url, intervalSec) => {
     logging.add(`Shelly configure ${url}`);
     config.url = url;
     status.intervalSec = intervalSec;
@@ -37,11 +34,7 @@ getShellyStatus = (noRepeat = false) => {
             status.busy = false;
         
             if (!error && res.statusCode == 200) {
-
-                status.time = moment();
-                status.relay = body.relays[0];
-
-                // do something with JSON, using the 'body' variable
+                setShellyRelayStatus(body.relays[0].ison,'getShellyStatus()');
             };
 
             if(status.intervalSec && !noRepeat) {
@@ -62,25 +55,20 @@ getShellyStatus = (noRepeat = false) => {
     }
 }
 
-shellyRequestOptions = {
+const shellyRequestOptions = {
     json: true,
     maxAttempts: 5,  // (default) try 5 times 
     retryDelay: 5000, // (default) wait for 5s before trying again
-    //retryStrategy: request.RetryStrategies.HTTPOrNetworkError // (default) retry on 5xx or network errors
 }
 
-turnShellyRelay = (onOff) => {
+const turnShellyRelay = (onOff) => {
     if (config.url !== null && (onOff == 'on' || onOff == 'off')) {
         logging.add(`Shelly turnShellyRelay(${onOff})`);
 
         request(config.url+'/relay/0?turn='+onOff, shellyRequestOptions, (error, res, body) => {
         
             if (!error && res.statusCode == 200) {
-
-                status.time = moment();
-                status.relay.ison = (onOff == 'on');
-                status.relay.source = 'turnShellyRelay';
-
+                setShellyRelayStatus(onOffToBool(onOff),'turnShellyRelay()');
             };
 
             if (error) {
@@ -94,19 +82,42 @@ turnShellyRelay = (onOff) => {
     }
 }
 
-// Shelly IO URL Actions will push the Relay State to the coop, no need to poll regularly
-setShellyRelayStatus = (onOff) => {
-    logging.add(`Shelly receiving setShellyRelayStatus(${onOff})`);
+// Shelly IO URL Actions will push the Relay State (on/off) to the coop, no need to poll regularly
+setShellyRelayStatusOnOff = (onOff) => {
+    logging.add(`Shelly receiving setShellyRelayStatusOnOff(${onOff})`);
     if(onOff == 'on' || onOff == 'off') {
-        logging.add(`Shelly receiving setShellyRelayStatus(${onOff})`);
-        status.time = moment();
-        status.relay.ison = (onOff == 'on');
-        status.relay.source = 'ioURLActions';
+        logging.add(`Shelly receiving setShellyRelayStatusOnOff(${onOff})`);
+        setShellyRelayStatus(onOffToBool(onOff),'setShellyRelayStatusOnOff');
     }
+}
+
+const onOffToBool = (onOff) => {
+    if(onOff === 'on') {
+        return true;
+    }
+    else if(onOff === 'off') {
+        return false;
+    }
+}
+
+const boolToOnOff = (bool) => {
+    if(bool === true) {
+        return 'on';
+    }
+    else if(bool === false) {
+        return 'off';
+    }
+}
+
+const setShellyRelayStatus = (onOffBool,source) => {
+    status.time = moment();
+    status.relay.ison = onOffBool;
+    status.source = source;
+    events.send('shellyRelayIsOn',onOffBool);
 }
 
 exports.configure = configure;
 exports.getShellyStatus = getShellyStatus;
 exports.turnShellyRelay = turnShellyRelay;
-exports.setShellyRelayStatus = setShellyRelayStatus;
+exports.setShellyRelayStatusOnOff = setShellyRelayStatusOnOff;
 exports.status = status;

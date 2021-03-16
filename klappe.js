@@ -1,5 +1,6 @@
 var logging = require('./logging.js');
 var gpioMotor = require('./gpio-relais.js');
+var events = require('./events.js');
 
 var klappe = {
     status: "not initialized",
@@ -94,7 +95,19 @@ const setKlappenStatus = (status, fahrDauer) => {
 
     klappe.duration = klappe.perf - klappe.previous.perf;
     logging.add("Klappenstatus " + status + " nach " + (klappe.duration / 1000) + "s - Fahrdauer " + klappe.previous.fahrDauer + " - jetzt " + fahrDauer + "s");
+
+    events.send('klappenStatus',status);
 };
+
+const setKlappenPosition = (obenUnten) => {
+    if (obenUnten != "oben" && obenUnten != "unten") {
+        logging.add("setKlappenPosition() wrong parameter","e");
+        return false;
+    }
+    klappe.position = obenUnten;
+    events.send('klappenPosition',obenUnten);
+
+}
 
 const manuelleInitialPosition = (pos) => {
     if (pos == "oben" || pos == "runter") {
@@ -210,10 +223,10 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
 
                 if (sekunden >= config.ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == config.ganzeFahrtSek) {
                     if (richtung == "hoch") {
-                        klappe.position = "oben";
+                        setKlappenPosition('oben');
                     }
                     else {
-                        klappe.position = "unten";
+                        setKlappenPosition('unten');
                     }
                 }
 
@@ -247,7 +260,7 @@ kalibriere = (obenUnten) => {
     if (obenUnten != "oben" && obenUnten != "unten") {
         return { success: false, message: "Bitte Position (oben/unten) korrekt angeben" };
     }
-    klappe.position = obenUnten;
+    setKlappenPosition(obenUnten);
     klappe.positionNum = (obenUnten == "oben" ? 1 : 0) * config.ganzeFahrtSek;
     klappe.hochSek = 0;
     klappe.runterSek = 0;

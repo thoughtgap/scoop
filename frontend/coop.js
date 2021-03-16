@@ -13,40 +13,46 @@ angular.module('todoApp', ['angularMoment'])
 
     const coopUrl = 'http://192.168.31.21:3000/';
 
-    $scope.cameraUrl = '';
-    $scope.cameraTime = '';
-
-    $scope.setCameraUrl = () => {
-      $scope.cameraUrl = coopUrl + 'cam/' + moment($scope.cameraTime).unix();
-      $scope.cameraUrlNightVision = coopUrl + 'nightvision/' + moment($scope.cameraTimeNightVision).unix();
+    $scope.camera = {
+      url: null,
+      time: null,
+      urlNightVision: null,
+      timeNightVision: null,
     }
+
+    $scope.updateCameraTime = (newTime,isNightVision=false) => {
+      if(isNightVision) {
+        $scope.camera.timeNightVision = newTime;
+      }
+      else {
+        $scope.camera.time = newTime;
+      }
+
+      $scope.camera.url = coopUrl + 'cam/' + moment($scope.camera.time).unix();
+      $scope.camera.urlNightVision = coopUrl + 'nightvision/' + moment($scope.camera.timeNightVision).unix();
+    };
 
     $scope.getStatus = () => {
         $scope.coopStatusLaedt = true;
-        // Simple GET request example:
+
         $http({
           method: 'GET',
           url: coopUrl + 'status'
         }).then(function successCallback(response) {
-            // this callback will be called asynchronously
-            // when the response is available
-            //todoList.coop.status = response;
             $scope.coopStatus = response.data;
             $scope.coopStatusLaedt = false;
             $scope.coopStatusVonWann = new Date();
-            
-            $scope.cameraTime = $scope.coopStatus.camera.time;
-            $scope.cameraTimeNightVision = $scope.coopStatus.camera.ir.time;
-            $scope.setCameraUrl();
 
+            $scope.updateCameraTime($scope.coopStatus.camera.time, false);
+            $scope.updateCameraTime($scope.coopStatus.camera.ir.time, true);
           }, function errorCallback(response) {
             $scope.coopStatusLaedt = false;
             $scope.coopStatusVonWann = new Date();
-            // called asynchronously if an error occurs
-            // or server returns response with an error status.
           });
     }
     $scope.getStatus();
+
+    
     
 
     $scope.klappeIst = (obenUnten) => {
@@ -175,29 +181,28 @@ angular.module('todoApp', ['angularMoment'])
       });
     }
 
-    var todoList = this;
-    todoList.todos = [
-      {text:'learn AngularJS', done:true},
-      {text:'build an AngularJS app', done:false}];
- 
-    todoList.addTodo = function() {
-      todoList.todos.push({text:todoList.todoText, done:false});
-      todoList.todoText = '';
-    };
- 
-    todoList.remaining = function() {
-      var count = 0;
-      angular.forEach(todoList.todos, function(todo) {
-        count += todo.done ? 0 : 1;
-      });
-      return count;
-    };
- 
-    todoList.archive = function() {
-      var oldTodos = todoList.todos;
-      todoList.todos = [];
-      angular.forEach(oldTodos, function(todo) {
-        if (!todo.done) todoList.todos.push(todo);
-      });
-    };
+    // Subscribe to coop events
+    var es = new EventSource('/events');
+    es.addEventListener('newWebcamPic', function (event) {
+      // Pass the new timestamp to determine the new pic's url
+      $scope.updateCameraTime(JSON.parse(event.data), false);
+      $scope.$apply();
+    });
+    es.addEventListener('newWebcamPicIR', function (event) {
+      // Pass the new timestamp to determine the new pic's url
+      $scope.updateCameraTime(JSON.parse(event.data),true); //.replaceAll('"',''), true);
+      $scope.$apply();
+    });
+    es.addEventListener('klappenPosition', function (event) {
+      $scope.coopStatus.klappe.position = JSON.parse(event.data); //.replaceAll('"','');
+      $scope.$apply();
+    });
+    es.addEventListener('klappenStatus', function (event) {
+      $scope.coopStatus.klappe.status = JSON.parse(event.data); //.replaceAll('"','');
+      $scope.$apply();
+    });
+    es.addEventListener('shellyRelayIsOn', function (event) {
+      $scope.coopStatus.shelly.relay.ison = JSON.parse(event.data);
+      $scope.$apply();
+    });
   }]);
