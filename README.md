@@ -12,6 +12,7 @@ The control unit consists of:
 * Infrared LED lamp for night vision (powered separately via 12V DC)
 * BME280 Sensor (Temperature, Humidity, Pressure)
 * Tactile Sensors to determine the hatch's final positions
+* Shelly v1 230V relay for a light bulb
 
 ## Configuration File
 Parameters are configured in `config.json`.
