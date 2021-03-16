@@ -40,5 +40,5 @@ It can be controlled from the coop:
 
 In case the Shelly app/web interface is used, shelly also informs the coop if it was triggered by using *I/O URL actions*:
 
-| OUTPUT SWITCHED ON URL | `http://<coop>/shelly/inform/on` |
-| OUTPUT SWITCHED OFF URL | `http://<coop>/shelly/inform/off` | 
+* OUTPUT SWITCHED ON URL: `http://<coop>/shelly/inform/on`
+* *OUTPUT SWITCHED OFF URL: `http://<coop>/shelly/inform/off`
