@@ -6,6 +6,11 @@ This is our smart chicken coop server. It is providing a web-based backend and (
   - [Configuration File](#configuration-file)
     - [Hatch Automation](#hatch-automation)
   - [Web Endpoints](#web-endpoints)
+  - [General](#general)
+  - [Hatch](#hatch)
+    - [Corrections](#corrections)
+  - [Webcam](#webcam)
+  - [Administrative](#administrative)
   - [`/events` Coop Event Stream](#events-coop-event-stream)
   - [Shelly Integration](#shelly-integration)
 
@@ -41,6 +46,44 @@ You can maintain fixed times and times relative to `sunset`, `sunrise`, or any o
 
 ## Web Endpoints
 
+## General
+* `/frontend/index.html` A hacky frontend (AngularJS)
+* `/status` Status as JSON-Object
+* `/log` Latest log messages
+
+## Hatch
+
+Moves the hatch up or down for a specified duration (`config.maxSekundenEinWeg`).
+* `/hoch` Move hatch up ()
+* `/runter` Move hatch down
+
+Move the hatch for a specified duration (in seconds) - be careful!
+* `/hoch/:wielange`
+* `/runter/:wielange`
+
+### Corrections
+If the hatch is not entirely open/closed, small correction movements can be fired which won't affect the up/down position.
+* `/korrigiere/hoch` Correct in 0.5s intervals (`config.korrekturSekunden`)
+* `/korrigiere/runter`
+
+To tell the hatch if it is up or down
+* `/kalibriere/oben` Tell the coop that the hatch is up
+* `/kalibriere/unten` Tell the coop that the hatch is down
+
+## Webcam
+* `/cam/new` Take a new picture
+* `/cam/:timestamp?` Retrieve the webcam picture. Can optionally provide a timestamp (which isn't even used in backend) if the url needs to change to load the new licture
+* `/camsvg/:timestamp?` Provides an svg version, with timestamp/current temps rendered into the picture
+* `/nightvision/new` Take a new night vision (IR) picture
+* `/nightvision/:timestamp?` Same as `/cam/:timestamp?`
+* `/nightvisionsvg/:timestamp?`
+
+
+## Administrative
+* `/heapdump` will send a heapdump
+* `/reset` will restart the application if it's run via nodemon (will modify a test.js file). Don't judge, please!
+
+
 ## `/events` Coop Event Stream
 A [server-sent events](https://www.npmjs.com/package/express-sse) (SSE) stream informing about things happening in the coop:
 * newWebcamPic
@@ -54,12 +97,12 @@ A [server-sent events](https://www.npmjs.com/package/express-sse) (SSE) stream i
 A Shelly v1 230V relay is used to control the light bulb inside the coop.
 It can be controlled from the coop:
 
-* `shelly/turn/on` turns the relay/bulb on.
-* `shelly/turn/off` turns it off.
+* `/shelly/turn/on` turns the relay/bulb on.
+* `/shelly/turn/off` turns it off.
 * `/shelly/update` can be used to poll the current Shelly state from its web endpoint.
 
 In case the Shelly app/web interface is used, shelly also informs the coop if it was triggered by using *I/O URL actions*:
 
 * OUTPUT SWITCHED ON URL: `http://<coop>/shelly/inform/on`
-* *OUTPUT SWITCHED OFF URL: `http://<coop>/shelly/inform/off`
+* OUTPUT SWITCHED OFF URL: `http://<coop>/shelly/inform/off`
 
