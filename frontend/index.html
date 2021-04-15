@@ -14,11 +14,11 @@
     /* .floaters {
       float: left;
       margin: 1em;
-    } */
-    /* http://meyerweb.com/eric/tools/css/reset/ 
-   v2.0 | 20110126
-   License: none (public domain)
-*/
+        } */
+        /* http://meyerweb.com/eric/tools/css/reset/ 
+      v2.0 | 20110126
+      License: none (public domain)
+    */
 
     html,
     body,
@@ -153,6 +153,22 @@
 
     /** Custom **/
 
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #121212;
+        color: #efefef;
+      }
+      .webcamPic {
+        border: 1px solid #333333;
+      }
+
+      a { color: #6200EE; }
+      /* a:visited { color: #551A8B; }
+      a:active, a:visited:active { color: #FF0000; } */
+      
+    }
+
     body {
       font-size: 16px;
       font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -187,7 +203,6 @@
       overflow: scroll;
       word-wrap: break-word;
       white-space: break-spaces;
-      background-color: #efefef;
     }
 
     img {
@@ -198,7 +213,6 @@
     .nostyle {
       text-decoration: none;
     }
-
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="coop.js"></script>
@@ -255,13 +269,17 @@
     </div>
     <div class="floaters">
       Bild von <time am-time-ago="camera.time"></time>
-      <a href="/camsvg" target="_blank"><img ng-src="{{camera.url}}"></a>
+        <a href="/camsvg" target="_blank">
+          <img ng-src="{{camera.url}}" class="webcamPic">
+        </a>
         <a href="" ng-click="nachtsichten()">✨ neues Nachtsichtfoto aufnehmen</a>
         <span ng-show="nachtsichtStatus.success == true">..erfolgreich angefragt <time am-time-ago="nachtsichtStatusVonWann"></time></span>
         <span ng-show="nachtsichtStatus.success == false">..Fehler {{nachtsichtStatus.message}} <time am-time-ago="nachtsichtStatusVonWann"></time></span>
       <span ng-show="camera.timeNightVision">
         Bild von <time am-time-ago="camera.timeNightVision"></time>
-        <a ng-show="camera.timeNightVision" href="/nightvisionsvg" target="_blank"><img ng-src="{{camera.urlNightVision}}"></a>
+          <a ng-show="camera.timeNightVision" href="/nightvisionsvg" target="_blank">
+            <img ng-src="{{camera.urlNightVision}}" class="webcamPic">
+          </a>
       </span>
     </div>
 
