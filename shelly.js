@@ -84,10 +84,12 @@ const turnShellyRelay = (onOff) => {
 
 // Shelly IO URL Actions will push the Relay State (on/off) to the coop, no need to poll regularly
 setShellyRelayStatusOnOff = (onOff) => {
-    logging.add(`Shelly receiving setShellyRelayStatusOnOff(${onOff})`);
     if(onOff == 'on' || onOff == 'off') {
         logging.add(`Shelly receiving setShellyRelayStatusOnOff(${onOff})`);
         setShellyRelayStatus(onOffToBool(onOff),'setShellyRelayStatusOnOff');
+    }
+    else {
+        logging.add(`Shelly receiving invalid setShellyRelayStatusOnOff(on,off)`);
     }
 }
 
