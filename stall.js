@@ -231,8 +231,11 @@ klappenModul.init();
 var camera = require('./camera.js');
 camera.configure(config.camera.intervalSec, config.camera.maxAgeSec, config.camera.autoTakeMin);
 
+var heating = require('./heating.js');
+heating.configure(config.heating.heatBelowC, config.heating.minimumHeatingMins, config.heating.enabled);
+
 var cronTasks = require('./cron-tasks.js');
-cronTasks.configure(config.location, config.hatchAutomation);
+cronTasks.configure(config.location, config.hatchAutomation, config.heating.timeFrame);
 
 var shelly = require('./shelly.js');
 shelly.configure(config.shelly.url, config.shelly.intervalSec);
@@ -306,7 +309,8 @@ app.get('/status', function (req, res) {
     },
     shelly: shelly.status,
     cron: cronTasks.status,
-    booted: bootTimestamp
+    booted: bootTimestamp,
+    heating: heating.status
   });
 });
 app.get('/log', function (req, res) {
@@ -427,6 +431,14 @@ app.get('/shelly/turn/:onoff', function (req, res) {
 app.get('/shelly/update', function (req, res) {
   shelly.getShellyStatus(true);
   res.send({'message':'Updating Shelly Status'});
+});
+app.get('/heating/enable', function (req, res) {
+  heating.setEnableHeating(true);
+  res.send({'message':'Turning Heating on'});
+});
+app.get('/heating/disable', function (req, res) {
+  heating.setEnableHeating(false);
+  res.send({'message':'Turning Heating off'});
 });
 
 app.get('/events', events.sse.init);

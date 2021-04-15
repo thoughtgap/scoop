@@ -242,24 +242,24 @@
       <h3 class="center">
         {{coopStatus.bme280.values.temperature | number : 1}}°C
 
-        <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'up'">
+        <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.temperature == 'up'">
           ↗
         </span>
-        <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'down'">
+        <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.temperature == 'down'">
           ↘
         </span>
         &nbsp;&nbsp;&nbsp;
         {{coopStatus.bme280.values.humidity | number : 0}}%
-        <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'up'">
+        <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.humidity == 'up'">
           ↗
         </span>
-        <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'down'">
+        <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.humidity == 'down'">
           ↘
         </span>
 
         &nbsp;&nbsp;&nbsp;
         <span ng-show="coopStatus.shelly.relay.ison">
-          💡 Licht ist an <a href="" ng-click="schalteLicht(false)">aus</a><br />
+          💡 Licht ist an {{coopStatus.heating.status.heating ? ' (🌞 heizen)' : ''}} <a href="" ng-click="schalteLicht(false)">aus</a><br />
         </span>
         <span ng-show="!coopStatus.shelly.relay.ison">
           🌌 Licht ist aus <a href="" ng-click="schalteLicht(true)">an</a><br />
@@ -324,7 +324,7 @@
           <h3>Automatisierung</h3>
           <ul>
             <li ng-repeat="job in coopStatus.cron.jobs">
-              {{job.action == 'open' ? 'Öffnen' : 'Schließen'}} um {{job.time}} <span ng-show="job.time != job.command">({{job.command}})</span>
+              {{job.time}} - {{ job.action }} <span ng-show="job.time != job.command">({{job.command}})</span>
             </li>
           </ul>
           Eingeplant <time am-time-ago="coopStatus.cron.setup"></time>
@@ -333,11 +333,12 @@
     </div>
     
     <div class="floaters">
+      
       <h3>💡 Licht</h3>
       <div>
         Aktualisiert: <a title="{{coopStatus.shelly.time}}"><time am-time-ago="coopStatus.shelly.time"></time></a><br />
-        Status: {{coopStatus.shelly.relay.ison ? 'an' : 'aus'}}<br />
-        
+        Status: {{coopStatus.shelly.relay.ison ? 'an' : 'aus'}}
+        {{coopStatus.heating.status.heating ? ' (🌞 heizen)' : ''}}<br />
         <p>
           <a href="" ng-click="schalteLicht(true)">Anschalten</a><br />
         </p>
@@ -352,7 +353,39 @@
           Message: {{fahreStatus.message}}<br />
           <time am-time-ago="fahreStatusVonWann"></time>
         </p> -->
+      </div>
+    </div>
+    <div class="floaters">
+      <h3>🌞 Heizung</h3>
+      <div>
+        <p>
+          <span ng-show="coopStatus.heating.status.enableHeating">
+            Betriebsbereit! <a href="" ng-click="schalteHeizung(false)">Abschalten</a>
+          </span>
+          <span ng-show="!coopStatus.heating.status.enableHeating">
+            Nicht eingeplant. <a href="" ng-click="schalteHeizung(true)">Anschalten</a>
+          </span>
+        </p>
+        
+        {{coopStatus.heating.status.heating ? '🌞 Heizt: ja' : '🌚 Heizt: nein'}}
+        <a title="{{coopStatus.heating.status.lastChange}}">seit <time am-time-ago="coopStatus.heating.status.lastChange"></time></a>
+        <span ng-show="coopStatus.heating.status.heating">
+          , bis mindestens <a title="{{coopStatus.heating.status.heatUntil}}"><time am-time-ago="coopStatus.heating.status.heatUntil"></time></a>
+        </span><br />
 
+        
+        <span ng-show="coopStatus.bme280.values.temperature < coopStatus.heating.config.heatBelowC">
+          🥶 Temperatur: Zu kalt, {{coopStatus.bme280.values.temperature | number : 1}}°C &lt; {{coopStatus.heating.config.heatBelowC | number}}°C
+        </span>
+        <span ng-show="coopStatus.bme280.values.temperature >= coopStatus.heating.config.heatBelowC">
+          🏜 Temperatur: Warm genug {{coopStatus.bme280.values.temperature | number : 1}}°C ≥ {{coopStatus.heating.config.heatBelowC | number}}°C
+        </span>
+        <br />
+        {{coopStatus.heating.status.inTimeFrame ? '👍' : '🙅‍♂️' }} Heiz-Zeitraum: {{coopStatus.heating.config.timeFrame.from.h}}:{{coopStatus.heating.config.timeFrame.from.m == '0' ? '0' : ''}}{{coopStatus.heating.config.timeFrame.from.m}} - {{coopStatus.heating.config.timeFrame.to.h}}:{{coopStatus.heating.config.timeFrame.to.m == '0' ? '0' : ''}}{{coopStatus.heating.config.timeFrame.to.m}}<br />
+        
+        <p>
+          Aktualisiert: <a title="{{coopStatus.heating.status.lastCheck}}"><time am-time-ago="coopStatus.heating.status.lastCheck"></time></a>
+        </p>
       </div>
     </div>
 
@@ -361,10 +394,10 @@
       <div>
         <p>
           Temperatur: {{coopStatus.bme280.values.temperature | number : 1}}°C 
-          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'up'">
+          <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.temperature == 'up'">
             ↗
           </span>
-          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.temperature == 'down'">
+          <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.temperature == 'down'">
             ↘
           </span>          
           <br />
@@ -373,17 +406,17 @@
         </p>
         <p>
           Luftdruck: {{coopStatus.bme280.values.pressure | number : 0}}hpa
-          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.pressure == 'up'">
+          <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.pressure == 'up'">
             ↗
           </span>
-          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.pressure == 'down'">
+          <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.pressure == 'down'">
             ↘
           </span><br />
           Luftfeuchtigkeit: {{coopStatus.bme280.values.humidity | number : 0}}%
-          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'up'">
+          <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.humidity == 'up'">
             ↗
           </span>
-          <span class="comparison" ng-show="coopStatus.bme280.compareTo.development.humidity == 'down'">
+          <span class="comparison" ng-show="coopStatus.bme280.hourAgo.development.humidity == 'down'">
             ↘
           </span> <time am-time-ago="coopStatus.bme280.time"></time><br />
         </p>

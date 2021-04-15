@@ -5,6 +5,7 @@ This is our smart chicken coop server. It is providing a web-based backend and (
   - [Hardware](#hardware)
   - [Configuration File](#configuration-file)
     - [Hatch Automation](#hatch-automation)
+    - [Heating via light bulb (via shelly)](#heating-via-light-bulb-via-shelly)
   - [Web Endpoints](#web-endpoints)
     - [General](#general)
     - [Hatch](#hatch)
@@ -13,6 +14,7 @@ This is our smart chicken coop server. It is providing a web-based backend and (
     - [Administrative](#administrative)
     - [Coop Event Stream](#coop-event-stream)
     - [Shelly Integration](#shelly-integration)
+    - [Heating](#heating)
 
 ## Hardware
 The control unit consists of:
@@ -43,6 +45,29 @@ You can maintain fixed times and times relative to `sunset`, `sunrise`, or any o
     "closeTimes": ["22:00","sunset-30"]
 }
 ```
+
+### Heating via light bulb (via shelly)
+The heating module lights up the (preferrably non-LED) light bulb to warm up the coop if the temperatures are low. The light bulb is operated by a Shelly relay, see below.
+
+The coop will only be heated if the current temperature falls below the treshold temperature set in `heatBelowC`.
+To prevent disco feeling, the light stays on for a minimum duration of `minimumHeatingMins` minutes (if it does not run out of time frame within this time).
+
+To prevent that the light turns on in the middle of a cold night, the time frame in which the bulb should be used for heating is to be specified in the same notation as the hatch automation times.
+
+The config parameters for the heating are:
+
+```json
+"heating": {
+    "enabled": true,
+    "heatBelowC": 5,
+    "minimumHeatingMins": 30,
+    "timeFrame": {
+      "from": "sunrise+0",
+      "to": "dusk-60"
+    }
+  }
+```
+
 
 ## Web Endpoints
 
@@ -105,3 +130,6 @@ In case the Shelly app/web interface is used, shelly also informs the coop if it
 * OUTPUT SWITCHED ON URL: `http://<coop>/shelly/inform/on`
 * OUTPUT SWITCHED OFF URL: `http://<coop>/shelly/inform/off`
 
+### Heating
+* `/heating/enable` turns the heating logic on. beware, light goes on only if all preconditions (time-frame, cold temps) are met!
+* `/heating/disable` turns it off.

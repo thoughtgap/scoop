@@ -167,6 +167,25 @@ angular.module('todoApp', ['angularMoment'])
       });
     }
 
+    $scope.schalteHeizung = (anAus) => {
+      if(anAus) {
+        reqUrl = coopUrl + 'heating/enable';
+      }
+      else {
+        reqUrl = coopUrl + 'heating/disable';
+      }
+
+      $http({
+        method: 'GET',
+        url: reqUrl
+      }).then(function successCallback(response) {
+        $scope.getStatus();
+      }, function errorCallback(response) {
+        $scope.getStatus();
+        alert("Fehler beim Heizung schalten: "+ response);
+      });
+    }
+
     $scope.getLichtStatus = (anAus) => {
       reqUrl = coopUrl + 'shelly/update';
 
@@ -203,6 +222,10 @@ angular.module('todoApp', ['angularMoment'])
     });
     es.addEventListener('shellyRelayIsOn', function (event) {
       $scope.coopStatus.shelly.relay.ison = JSON.parse(event.data);
+      $scope.$apply();
+    });
+    es.addEventListener('heating', function (event) {
+      $scope.coopStatus.heating.status = JSON.parse(event.data);
       $scope.$apply();
     });
   }]);

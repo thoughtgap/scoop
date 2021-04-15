@@ -46,5 +46,14 @@
   "hatchAutomation": {
     "openTimes": ["06:30","sunrise+30"],
     "closeTimes": ["22:00","sunset-30"]
+  },
+  "heating": {
+    "enabled": true,
+    "heatBelowC": 5,
+    "minimumHeatingMins": 30,
+    "timeFrame": {
+      "from": "sunrise+0",
+      "to": "dusk-60"
+    }
   }
 }

@@ -1,6 +1,7 @@
 var logging = require('./logging.js');
 const bme280 = require('bme280');
 var moment = require('moment');
+var heating = require('./heating.js');
 
 var status = {
     busy: false,
@@ -11,7 +12,7 @@ var status = {
     },
     time: null,
     intervalSec: null,
-    compareTo: {
+    hourAgo: {
         temperature: null,
         pressure: null,
         humidity: null,
@@ -73,7 +74,7 @@ readBME280 = () => {
             const keepForMin = 60;   // How long to preserve all values
 
             // Add value every x seconds
-            logging.add(`BME280 hourly history ${history.length} entries`);
+            //logging.add(`BME280 hourly history ${history.length} entries`);
             
             if(history.length == 0 || now.diff(history[history.length - 1].time) >= keepEverySec * 1000) {
                 
@@ -83,7 +84,7 @@ readBME280 = () => {
                     pressure: status.values.pressure,
                     humidity: status.values.humidity
                 });
-                logging.add(`BME280 hourly history adding      --> ${history.length} entries`);
+                //logging.add(`BME280 hourly history adding      --> ${history.length} entries`);
 
                 // Discard values older than x minutes
                 history = history.filter(item => {
@@ -91,7 +92,7 @@ readBME280 = () => {
                     //logging.add(`BME280 hourly history filtering   --> keep=${keep}     ${now.diff(item.time)} <= ${(keepForMin * 60 * 1000)}`);
                     return keep;
                 });
-                logging.add(`BME280 hourly history removed old --> ${history.length} entries`);
+                //logging.add(`BME280 hourly history removed old --> ${history.length} entries`);
 
             
                 // Add development of values
@@ -133,8 +134,8 @@ readBME280 = () => {
                 }
 
                 // Only expose the oldest element (max 1h old) to the status object to keep minimal data 
-                status.compareTo = history[0];
-                status.compareTo.development = development;
+                status.hourAgo = history[0];
+                status.hourAgo.development = development;
 
             }
             // else {
@@ -189,6 +190,9 @@ readBME280 = () => {
                 status.daily.max.humidity = status.values.humidity;
                 status.daily.max.humidityTime = now;
             }
+
+            // Send values to heating.js
+            heating.checkHeating(status.values.temperature,status.hourAgo.temperature);
 
             if(status.intervalSec) {
                 setTimeout(function erneutLesen() {
