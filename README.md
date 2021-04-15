@@ -115,6 +115,7 @@ To tell the hatch if it is up or down
   * klappenStatus
   * klappenPosition
   * shellyRelayIsOn
+  * heating
 
 
 ### Shelly Integration
