@@ -137,13 +137,13 @@ const setupCronjobs = () => {
                 if(newJob.action === "open") {
                     action = klappenModul.klappeFahren("hoch",null,false);
                     if(action.success != true) {
-                        logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", warn);
+                        logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", "warn");
                     }
                 }
                 else if(newJob.action === "close") {
                     action = klappenModul.klappeFahren("runter",null,false);
                     if(action.success != true) {
-                        logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", warn);
+                        logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", "warn");
                     }
                 }
                 else if(newJob.action === "allowHeating" || newJob.action === "forbidHeating") {
