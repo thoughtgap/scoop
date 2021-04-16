@@ -31,7 +31,7 @@ readCPUTemp = () => {
               status.error = null;
               status.values.temperature = temp;
               status.time = new moment();
-              logging.add(`cpu: ${temp}°C`);
+              logging.add(`CPU ${temp}°C`);
               logging.thingspeakLog("field4="+status.values.temperature);
             }
             if(status.intervalSec) {
