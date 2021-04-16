@@ -7,7 +7,7 @@ var sse = new SSE();
 
 send = (eventType, message) => {
     sse.send(message,eventType);
-    logging.add(`Event ${eventType}: ${JSON.stringify(message)}`);
+    logging.add(`Event ${eventType}: ${JSON.stringify(message)}`,'debug');
 };
 
 exports.send = send;

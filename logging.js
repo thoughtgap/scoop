@@ -16,36 +16,46 @@ consoleLog = SimpleNodeLogger.createSimpleLogger();
 const validLogLevels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'];
 
 add = (message, type = "info") => {
-
-    if(!validLogLevels.includes(type)) {
-        fileLog.log('warn','Invalid Log Level '+type+ ' changed to warn');
-        consoleLog.log('warn','Invalid Log Level '+type+ ' changed to warn');
-        type = 'warn';
-    }
-
-    let timestamp = moment();
+    type = validLogLevel(type,'info');
     fileLog.log(type, message);
     consoleLog.log(type, message);
 }
 
+const setLogLevel = (logLevel) => {
+    logLevel = validLogLevel(logLevel);
+
+    fileLog.setLevel(logLevel);
+    consoleLog.setLevel(logLevel);
+}
+
+const validLogLevel = (logLevel, fallback) => {
+    if(!validLogLevels.includes(logLevel)) {
+        fileLog.log('warn','Invalid Log Level '+type+ ' changed to '+fallback);
+        consoleLog.log('warn','Invalid Log Level '+type+ ' changed to '+fallback);
+
+        return fallback;
+    }
+    return logLevel;
+}
+
 
 // Logging to Thingspeak
-thingspeakAPIKey = null;
+let thingSpeakConfig = {
+    apiKey: null,
+    enable: null,
+    baseUrl: null
+}
 
 thingspeakSetAPIKey = (apikey) => {
-    thingspeakAPIKey = apikey;
+    thingSpeakConfig.apiKey = apikey;
+    thingSpeakConfig.enable = true;
+    thingSpeakConfig.baseUrl = "https://api.thingspeak.com/update?api_key="+ apikey + "&";
 }
 
 thingspeakLog = (urlStr) => {
-    if(!thingspeakAPIKey) {
-        logging.add("No Thingspeak API Key found");
-    }
-    else {
-        this.add("Thingspeak Log " + urlStr);
-    
-        const baseUrl = "https://api.thingspeak.com/update?api_key="+ thingspeakAPIKey + "&"
-        
-        request(baseUrl + urlStr, { json: true }, (err, res, body) => {
+    if (thingSpeakConfig.enable) {
+        this.add("Thingspeak Log " + urlStr,'debug');
+        request(thingSpeakConfig.baseUrl + urlStr, { json: true }, (err, res, body) => {
             if (err) {
                 this.add(err,'warn');
             }
@@ -54,5 +64,6 @@ thingspeakLog = (urlStr) => {
 }
 
 exports.add = add;
+exports.setLogLevel = setLogLevel;
 exports.thingspeakLog = thingspeakLog;
 exports.thingspeakSetAPIKey = thingspeakSetAPIKey;

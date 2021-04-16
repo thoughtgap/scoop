@@ -74,11 +74,11 @@ takePhoto = (nightVision = false) => {
     }
 
     if(now <= max && !nightVision) {
-        logging.add("Not taking picture. Picture still good.");
+        logging.add("Not taking picture. Picture still good.","debug");
         return "picture still good";
     }
     else if(camera.busy) {
-        logging.add("Not taking picture. Camera busy.");
+        logging.add("Not taking picture. Camera busy."),"debug";
         return "camera busy";
     }
     else {

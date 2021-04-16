@@ -120,19 +120,21 @@ const checkHeating = (currentTemp=null,historicTemp=null) => {
         && currentTemp !== null
         && historicTemp !== null
       ) {
-        logging.add("Heating Check. In Time Frame.");
-
-        if(status.heating && !status.heatedLongEnough) {
-            logging.add("Heating Haven't heated long enough - keep heating.")
-            heatNow = true;
-        }
-        else if (status.tooCold) {
-            logging.add("Heating It's cold! Let's heat.");
-            heatNow = true;
-        }
+          
+          if(status.heating && !status.heatedLongEnough) {
+              logging.add("Heating Check. In Time Frame. Haven't heated long enough ("+config.minimumHeatingMins+"min) - keep heating.")
+              heatNow = true;
+            }
+            else if (status.tooCold) {
+                logging.add("Heating Check. In Time Frame. It's cold! Let's heat.");
+                heatNow = true;
+            }
+            else {    
+                logging.add("Heating Check. In Time Frame. Not cold enough.","debug");
+            }
     }
     if(status.heating && !heatNow) {
-        logging.add("Heating Turning it off.");
+        logging.add("Heating Check. Turning heating off.");
     }
 
     setHeating(heatNow);

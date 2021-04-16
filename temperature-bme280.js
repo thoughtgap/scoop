@@ -58,7 +58,7 @@ configure = (port, intervalSec) => {
 
 readBME280 = () => {
     if (!status.busy && config.port !== null) {
-        logging.add("BME280 readSensor() getting sensor data");
+        logging.add("BME280 readSensor() getting sensor data","debug");
         status.busy = true;
         bme280.open({ i2cAddress: config.port }).then(async sensor => {
             status.values = await sensor.read();

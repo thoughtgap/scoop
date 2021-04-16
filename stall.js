@@ -13,6 +13,7 @@ var events = require('./events.js');
 let config = require('./config.json');
 const bootTimestamp = moment();
 logging.thingspeakSetAPIKey(config.thingspeakAPI);
+logging.setLogLevel(config.logLevel);
 
 const ganzeFahrtSek = config.ganzeFahrtSek;
 
@@ -241,12 +242,12 @@ var shelly = require('./shelly.js');
 shelly.configure(config.shelly.url, config.shelly.intervalSec);
 shelly.getShellyStatus();
 
-// Hier kommt nun der ganze Server-Kram
+// Handle http requests
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 
-  logging.add(`req ${req.method} ${req.originalUrl} from ${( req.headers['x-forwarded-for'] || req.connection.remoteAddress )}`, 'info');
+  logging.add(`req ${req.method} ${req.originalUrl} from ${( req.headers['x-forwarded-for'] || req.connection.remoteAddress )}`, 'debug');
   next();
 });
 

@@ -67,7 +67,7 @@ const setupCronjobs = () => {
         coopCronjobs = [];
     }
 
-    logging.add("Cronjobs: Set up Setup Hatch Cronjobs");
+    logging.add("Cronjobs: Set up Setup Cronjobs");
     let cronjobsToConfigure = [];
 
     cronConfig.hatchAutomation.openTimes.forEach(openingTime => {
