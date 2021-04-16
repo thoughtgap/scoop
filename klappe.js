@@ -41,7 +41,7 @@ const configure = (
 };
 
 const init = () => {
-    logging.add('Initializing 🐔 pok', 'info');
+    logging.add('Initializing hatch 🐔 pok', 'info');
 
     // Die manuelle Initialposition ist immer wichtiger als die automatische
     if (initialPositionManuell !== null) {
@@ -51,32 +51,32 @@ const init = () => {
         return true;
     }
 
-    // Ableitung der Initialposition aus den aktuellen Sensorständen
-    let posWahrscheinlich = [];
-    if (config.sensorObenMontiert && sensorObenWert() == "gedrückt") {
-        // Die Position ist wahrscheinlich oben
-        posWahrscheinlich.push("oben");
-    }
-    if (config.sensorUntenMontiert && sensorUntenWert() == "gedrückt") {
-        // Die Position ist wahrscheinlich unten
-        posWahrscheinlich.push("unten");
-    }
+    // // Ableitung der Initialposition aus den aktuellen Sensorständen
+    // let posWahrscheinlich = [];
+    // if (config.sensorObenMontiert && sensorObenWert() == "gedrückt") {
+    //     // Die Position ist wahrscheinlich oben
+    //     posWahrscheinlich.push("oben");
+    // }
+    // if (config.sensorUntenMontiert && sensorUntenWert() == "gedrückt") {
+    //     // Die Position ist wahrscheinlich unten
+    //     posWahrscheinlich.push("unten");
+    // }
 
-    if (posWahrscheinlich.length == 1) {
-        // Es gibt nur eine Möglichkeit, die Initialposition ist hiermit klar.
-        initialPosition = posWahrscheinlich[0];
+    // if (posWahrscheinlich.length == 1) {
+    //     // Es gibt nur eine Möglichkeit, die Initialposition ist hiermit klar.
+    //     initialPosition = posWahrscheinlich[0];
 
-        logging.add(`Initialposition: ${initialPosition}`);
+    //     logging.add(`Initialposition: ${initialPosition}`);
 
-        setKlappenStatus("angehalten", null);
-        logging.add("Initialisierung erfolgreich");
-        return true;
-    }
-    else {
+    //     setKlappenStatus("angehalten", null);
+    //     logging.add("Initialisierung erfolgreich");
+    //     return true;
+    // }
+    // else {
         // Kann keine mögliche Position ableiten, braucht manuellen Input.
         logging.add("Konnte keine Initialposition ermitteln. Brauche manuellen Input.");
         return false;
-    }
+    // }
 };
 
 const setKlappenStatus = (status, fahrDauer) => {
@@ -85,17 +85,17 @@ const setKlappenStatus = (status, fahrDauer) => {
         status: klappe.status,
         zeit: klappe.zeit,
         fahrDauer: klappe.fahrDauer,
-        perf: klappe.perf,
+        //perf: klappe.perf,
     }
 
     klappe.status = status;
     klappe.zeit = new Date();
     klappe.fahrDauer = fahrDauer;
     //klappe.perf = performance.now();
+    //klappe.duration = klappe.perf - klappe.previous.perf;
+    klappe.duration = 0;
 
-    klappe.duration = klappe.perf - klappe.previous.perf;
     logging.add("Klappenstatus " + status + " nach " + (klappe.duration / 1000) + "s - Fahrdauer " + klappe.previous.fahrDauer + " - jetzt " + fahrDauer + "s");
-
     events.send('klappenStatus',status);
 };
 
@@ -106,7 +106,6 @@ const setKlappenPosition = (obenUnten) => {
     }
     klappe.position = obenUnten;
     events.send('klappenPosition',obenUnten);
-
 }
 
 const manuelleInitialPosition = (pos) => {
