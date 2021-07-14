@@ -72,6 +72,11 @@ The config parameters for the heating are:
   }
 ```
 
+## Install & Run
+Install with `npm install`.
+
+Run with `node stall.js`. I host the service with [pm2](https://pm2.keymetrics.io/).
+
 
 ## Web Endpoints
 
