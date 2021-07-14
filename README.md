@@ -1,5 +1,5 @@
-# schicke-chicks 🐔
-This is our smart chicken coop server. It is providing a web-based backend and (somewhat limited and hacky) frontend to control the coop's hatch and view its webcam and sensor data.
+# scoop 🐔
+This is our **smart chicken coop** server. It is providing a web-based backend and (somewhat limited and hacky) frontend to control the coop's hatch and view its webcam and sensor data.
 
 - [schicke-chicks 🐔](#schicke-chicks-)
   - [Hardware](#hardware)
@@ -16,6 +16,7 @@ This is our smart chicken coop server. It is providing a web-based backend and (
     - [Shelly Integration](#shelly-integration)
     - [Heating](#heating)
 
+## Screenshot
 ![Screenshot of Frontend](https://github.com/thoughtgap/scoop/blob/master/frontend/scoop-screenshot.png?raw=true)
 
 ## Hardware
