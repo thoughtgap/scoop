@@ -16,6 +16,8 @@ This is our smart chicken coop server. It is providing a web-based backend and (
     - [Shelly Integration](#shelly-integration)
     - [Heating](#heating)
 
+![Screenshot of Frontend](https://github.com/thoughtgap/scoop/blob/master/frontend/scoop-screenshot.png?raw=true)
+
 ## Hardware
 The control unit consists of:
 
