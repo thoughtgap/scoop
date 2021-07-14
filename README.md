@@ -29,7 +29,8 @@ The control unit consists of:
 * Infrared LED lamp for night vision (powered separately via 12V DC)
 * BME280 Sensor (Temperature, Humidity, Pressure)
 * Tactile Sensors to determine the hatch's final positions
-* Shelly v1 230V relay for a light bulb
+* Shelly v1 230V relay for a light bulb.
+* Light bulb. I use a 60W traditional bulb, it does a good job heating the coop up in the winter and keeping temperatures above 0°C.
 
 ## Configuration File
 Parameters are configured in `config.json`.
