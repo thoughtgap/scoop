@@ -60,6 +60,7 @@ init = () => {
     }
 
     if (motorConfig.skipGpioIR) {
+        global.gpioIR = null;
         logging.add("Skipping real gpioIR init due to skipGpio");
     }
     else {
@@ -123,7 +124,7 @@ setNightVision = (onoff) => {
 
         let newStatus = (onoff == true ? motorConfig.motorEin : motorConfig.motorAus);
         logging.add("gpio-relais.setNightVision(true) Turning Night Vision "+(onoff ? "on" : "off"),"debug");
-        gpioIR.writeSync(newStatus);
+        if (gpioIR) gpioIR.writeSync(newStatus);
         IRlogChange(onoff);
         return true;
     }
@@ -139,6 +140,8 @@ motorIsOn = () => {
 }
 
 IRIsOn = () => {
+    if (!gpioIR) return false;
+    
     let status = gpioIR.readSync() == motorConfig.motorEin;
     logging.add(`IR on:  ${status}`); 
     return status;
