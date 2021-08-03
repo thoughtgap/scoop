@@ -35,8 +35,8 @@ const setLogLevel = (logLevel) => {
 
 const validLogLevel = (logLevel, fallback) => {
     if(!validLogLevels.includes(logLevel)) {
-        fileLog.log('warn','Invalid Log Level '+type+ ' changed to '+fallback);
-        consoleLog.log('warn','Invalid Log Level '+type+ ' changed to '+fallback);
+        fileLog.log('warn','Invalid Log Level '+logLevel+ ' changed to '+fallback);
+        consoleLog.log('warn','Invalid Log Level '+logLevel+ ' changed to '+fallback);
 
         return fallback;
     }
