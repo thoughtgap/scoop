@@ -87,7 +87,7 @@ takePhoto = (nightVision = false) => {
       }
 
       camera.busy = true;
-      logging.add("Taking a"+ (nightVision ? " night vision" : "") +" picture");
+      logging.add("Taking a"+ (nightVision ? " night vision" : "") +" picture","debug");
       let takingPicture = moment();
 
       cam.takePhoto().then((photo) => {
