@@ -1,5 +1,5 @@
-# schicke-chicks 🐔
-This is our smart chicken coop server. It is providing a web-based backend and (somewhat limited and hacky) frontend to control the coop's hatch and view its webcam and sensor data.
+# scoop 🐔
+This is our **smart chicken coop** server. It is providing a web-based backend and (somewhat limited and hacky) frontend to control the coop's hatch and view its webcam and sensor data.
 
 - [schicke-chicks 🐔](#schicke-chicks-)
   - [Hardware](#hardware)
@@ -16,6 +16,9 @@ This is our smart chicken coop server. It is providing a web-based backend and (
     - [Shelly Integration](#shelly-integration)
     - [Heating](#heating)
 
+## Screenshot
+![Screenshot of Frontend](https://github.com/thoughtgap/scoop/blob/master/frontend/scoop-screenshot.png?raw=true)
+
 ## Hardware
 The control unit consists of:
 
@@ -27,7 +30,8 @@ The control unit consists of:
 * Infrared LED lamp for night vision (powered separately via 12V DC)
 * BME280 Sensor (Temperature, Humidity, Pressure)
 * Tactile Sensors to determine the hatch's final positions
-* Shelly v1 230V relay for a light bulb
+* Shelly v1 230V relay for a light bulb.
+* Light bulb. I use a 60W traditional bulb, it does a good job heating the coop up in the winter and keeping temperatures above 0°C.
 
 ## Configuration File
 Parameters are configured in `config.json`.
@@ -67,6 +71,11 @@ The config parameters for the heating are:
     }
   }
 ```
+
+## Install & Run
+Install with `npm install`.
+
+Run with `node stall.js`. I host the service with [pm2](https://pm2.keymetrics.io/).
 
 
 ## Web Endpoints

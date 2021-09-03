@@ -55,5 +55,9 @@
       "from": "sunrise+0",
       "to": "dusk-60"
     }
+  },
+  "shelly": {
+    "url": "xxx",
+    "intervalSec": 30
   }
 }
