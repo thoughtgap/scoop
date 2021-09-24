@@ -58,6 +58,12 @@ getHumidity = () => {
   return null;
 }
 
+var telegram = require('./telegram.js');
+telegram.configure(config.telegram.sendMessages,
+                  config.telegram.botId,
+                  config.telegram.token,
+                  config.telegram.chatId);
+
 if(!skipGpio.dht22) {
   logging.add("Initializing DHT22 Temperature Sensor");
   var dht22 = require('./temperature-dht22.js');

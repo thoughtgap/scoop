@@ -2,6 +2,7 @@ var logging = require('./logging.js');
 var moment = require('moment');
 var gpioRelais = require('./gpio-relais.js');
 var events = require('./events.js');
+var telegram = require('./telegram.js');
 
 var camera = {
     image: null,
@@ -64,7 +65,14 @@ queueNightvision = () => {
   return this.takePhoto(true)
 }
 
-takePhoto = (nightVision = false) => {
+queueTelegram = () => {
+  camera.telegramQueue = true;
+  camera.ir.queued = true;
+  return this.takePhoto(true)
+}
+
+takePhoto = (nightVision = false, sendTelegramMessage = false) => {
+
     let now = new Date();
     let max = camera.timeNextImage;
 
@@ -94,11 +102,11 @@ takePhoto = (nightVision = false) => {
 
         newPicTime = new Date();
 
-        camera.image = photo;  
+        camera.image = photo;
         camera.time = newPicTime;
 
         if(nightVision) {
-          camera.ir.image = photo;  
+          camera.ir.image = photo;
           camera.ir.time = newPicTime;
           camera.ir.queued = false;
         }
@@ -111,6 +119,12 @@ takePhoto = (nightVision = false) => {
         // Turn off Infrared LEDs again
         if(nightVision && !gpioRelais.setNightVision(false)) {
           logging.add("Error when turning night vision off","warn");
+        }
+
+        // Send picture via Telegram
+        if(camera.telegramQueue && nightVision) {
+          telegram.sendPhoto(photo);
+          camera.telegramQueue = false;
         }
         
         // Push new Webcam pictures via sse
@@ -248,4 +262,5 @@ exports.getSvg = getSvg;
 exports.getJpg = getJpg;
 exports.getIRJpg = getIRJpg;
 exports.queueNightvision = queueNightvision;
+exports.queueTelegram = queueTelegram;
 //exports.sse = sse;

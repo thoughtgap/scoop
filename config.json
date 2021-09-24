@@ -59,5 +59,11 @@
   "shelly": {
     "url": "xxx",
     "intervalSec": 30
+  },
+  "telegram": {
+    "sendMessages": false,
+    "botId": null,
+    "token": null,
+    "chatId": null
   }
 }

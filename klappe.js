@@ -1,6 +1,7 @@
 var logging = require('./logging.js');
 var gpioMotor = require('./gpio-relais.js');
 var events = require('./events.js');
+var camera = require('./camera.js');
 
 var klappe = {
     status: "not initialized",
@@ -119,7 +120,7 @@ const manuelleInitialPosition = (pos) => {
 
 const korrigiereHoch = () => {
     logging.add("Korrigiere hoch");
-    return klappeFahren("hoch", config.korrekturSekunden, true);
+    return klappen("hoch", config.korrekturSekunden, true);
 };
 const korrigiereRunter = () => {
     logging.add("Korrigiere runter");
@@ -200,6 +201,7 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
                     gpioMotor.fahreRunter();
                 }
             }
+
             setKlappenStatus("fahre" + richtung, sekunden);
 
             // Motor später wieder abschalten
@@ -244,6 +246,10 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
 stoppeKlappe = () => {
     gpioMotor.stoppeMotor();
     setKlappenStatus("angehalten",null);
+
+    // Take a picture and send via Telegram
+    camera.queueTelegram();
+    camera.getIRJpg();
 }
 
 bewegungSumme = () => {
