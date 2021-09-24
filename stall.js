@@ -60,7 +60,6 @@ getHumidity = () => {
 
 var telegram = require('./telegram.js');
 telegram.configure(config.telegram.sendMessages,
-                  config.telegram.botId,
                   config.telegram.token,
                   config.telegram.chatId);
 

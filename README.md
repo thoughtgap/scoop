@@ -1,11 +1,14 @@
 # scoop 🐔
 This is our **smart chicken coop** server. It is providing a web-based backend and (somewhat limited and hacky) frontend to control the coop's hatch and view its webcam and sensor data.
 
-- [schicke-chicks 🐔](#schicke-chicks-)
+- [scoop 🐔](#scoop-)
+  - [Screenshot](#screenshot)
   - [Hardware](#hardware)
   - [Configuration File](#configuration-file)
     - [Hatch Automation](#hatch-automation)
     - [Heating via light bulb (via shelly)](#heating-via-light-bulb-via-shelly)
+    - [Telegram Messages](#telegram-messages)
+  - [Install & Run](#install--run)
   - [Web Endpoints](#web-endpoints)
     - [General](#general)
     - [Hatch](#hatch)
@@ -71,6 +74,13 @@ The config parameters for the heating are:
     }
   }
 ```
+
+### Telegram Messages
+For monitoring if hatch operated fine (my relais is a bit worn out), scoop can send webcam pictures via Telegram after stopping the hatch. This is implemented with a Telegram bot, which sends messages to a specific chat (the owner's phone).
+This feature is *not* implemented as a bi-directional bot (e.g. request pictures or operate hatch via message to the bot), it's a one-way street, to keep  it simple.
+For the bot configuration, you'll need a token and chat ID, see [Telegram Bot API](https://core.telegram.org/bots/api).
+
+![Screenshot of Telegram Message](https://github.com/thoughtgap/scoop/blob/master/docs/telegram-bot.png?raw=true)
 
 ## Install & Run
 Install with `npm install`.

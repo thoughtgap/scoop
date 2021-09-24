@@ -3,14 +3,12 @@ const request = require('request');
 const fs = require('fs');
 
 var telegramConfig = {
-    botId: null,
     token: null,
     chatId: null
 }
 
-configure = (sendMessages, botId, token, chatId) => {
+configure = (sendMessages, token, chatId) => {
     telegramConfig.sendMessages = sendMessages;
-    telegramConfig.botId = botId;
     telegramConfig.token = token;
     telegramConfig.chatId = chatId;
     logging.add(`Telegram Configured - ${telegramConfig.sendMessages ? 'enabled' : 'disabled'}`);
@@ -22,7 +20,7 @@ configure = (sendMessages, botId, token, chatId) => {
  */
 const sendMessages = (message) => {
     if (!telegramConfig.sendMessages) { return false; }
-    request("https://api.telegram.org/" + telegramConfig.botId + ":" + telegramConfig.token + "/sendMessages?chat_id=" + telegramConfig.chatId + "&text=" + encodeURIComponent(message), {}, (err, res, body) => { });
+    request(`https://api.telegram.org/${telegramConfig.token}/sendMessages?chat_id=${telegramConfig.chatId}&text=${encodeURIComponent(message)}`, {}, (err, res, body) => { });
 }
 
 /**
@@ -32,8 +30,9 @@ const sendMessages = (message) => {
 const sendPhoto = (photo) => {
     if (!telegramConfig.sendMessages) { return false; }
 
-    logging.add("Telegram SendPhoto");
-    const url = `https://api.telegram.org/${telegramConfig.botId}:${telegramConfig.token}/sendPhoto?chat_id=${telegramConfig.chatId}`;
+    logging.add("Telegram SendPhoto",'debug');
+    const url = `https://api.telegram.org/${telegramConfig.token}/sendPhoto?chat_id=${telegramConfig.chatId}`;
+    console.log(url);
 
     const post = request.post({url}, (err, httpResponse, body) => !err
         ? logging.add('Telegram Upload successful!','debug')
