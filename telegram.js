@@ -35,23 +35,17 @@ const sendPhoto = (photo) => {
     logging.add("Telegram SendPhoto");
     const url = `https://api.telegram.org/${telegramConfig.botId}:${telegramConfig.token}/sendPhoto?chat_id=${telegramConfig.chatId}`;
 
-    var buf = Buffer.from(photo, 'base64');
-    fs.writeFile('image.jpg', buf, () => {
+    const post = request.post({url}, (err, httpResponse, body) => !err
+        ? logging.add('Telegram Upload successful!','debug')
+        : logging.add("Telegram Upload failed")
+    );
 
-        const formData = {
-            photo: fs.createReadStream(__dirname + '/image.jpg')
-        };
-
-        request.post({
-            url: url,
-            formData: formData
-        }, function optionalCallback(err, httpResponse, body) {
-            if (err) {
-                logging.add("Telegram Upload failed");
-            }
-            logging.add('Telegram Upload successful!', 'debug');
-        });
-    });
+    const form = post.form();
+    form.append(
+        'photo',
+        Buffer.from(photo, 'base64'),
+        {filename: 'image.jpg'}
+    );
 }
 
 exports.configure = configure;
