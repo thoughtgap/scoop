@@ -381,7 +381,7 @@
           🏜 Temperatur: Warm genug {{coopStatus.bme280.values.temperature | number : 1}}°C ≥ {{coopStatus.heating.config.heatBelowC | number}}°C
         </span>
         <br />
-        {{coopStatus.heating.status.inTimeFrame ? '👍' : '🙅‍♂️' }} Heiz-Zeitraum: {{coopStatus.heating.config.timeFrame.from.h}}:{{coopStatus.heating.config.timeFrame.from.m == '0' ? '0' : ''}}{{coopStatus.heating.config.timeFrame.from.m}} - {{coopStatus.heating.config.timeFrame.to.h}}:{{coopStatus.heating.config.timeFrame.to.m == '0' ? '0' : ''}}{{coopStatus.heating.config.timeFrame.to.m}}<br />
+        {{coopStatus.heating.status.inTimeFrame ? '👍' : '🙅‍♂️' }} Heiz-Zeitraum: {{coopStatus.heating.config.timeFrame.from.h}}:{{coopStatus.heating.config.timeFrame.from.m <= 9 ? '0' : ''}}{{coopStatus.heating.config.timeFrame.from.m}} - {{coopStatus.heating.config.timeFrame.to.h}}:{{coopStatus.heating.config.timeFrame.to.m <= 9 ? '0' : ''}}{{coopStatus.heating.config.timeFrame.to.m}}<br />
         
         <p>
           Aktualisiert: <a title="{{coopStatus.heating.status.lastCheck}}"><time am-time-ago="coopStatus.heating.status.lastCheck"></time></a>
