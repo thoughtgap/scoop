@@ -61,8 +61,13 @@ const shellyRequestOptions = {
     retryDelay: 5000, // (default) wait for 5s before trying again
 }
 
-const turnShellyRelay = (onOff) => {
-    if (config.url !== null && (onOff == 'on' || onOff == 'off')) {
+const turnShellyRelay = (onOff,retryCount = null) => {
+    if(retryCount > 900) { 
+        // Try max 30mins 
+        logging.add("Shelly turnShellyRelay() - retried too often, not trying anymore");
+        return false;
+    }
+    else if (config.url !== null && (onOff == 'on' || onOff == 'off')) {
         logging.add(`Shelly turnShellyRelay(${onOff})`);
 
         request(config.url+'/relay/0?turn='+onOff, shellyRequestOptions, (error, res, body) => {
@@ -73,6 +78,16 @@ const turnShellyRelay = (onOff) => {
 
             if (error) {
                 logging.add(error,'warn');
+
+                // Try again if failed
+                if(retryCount === null) {
+                    retryCount = 0;
+                }
+                logging.add("Shelly turnShellyRelay() - failed - try again in 2s");
+                setTimeout(() => {
+                    turnShellyRelay(onOff, (retryCount + 1));
+                },2000);
+                
                 return false;
             };
         });
