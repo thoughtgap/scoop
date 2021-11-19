@@ -120,7 +120,7 @@ const manuelleInitialPosition = (pos) => {
 
 const korrigiereHoch = () => {
     logging.add("Korrigiere hoch");
-    return klappen("hoch", config.korrekturSekunden, true);
+    return klappeFahren("hoch", config.korrekturSekunden, true);
 };
 const korrigiereRunter = () => {
     logging.add("Korrigiere runter");
