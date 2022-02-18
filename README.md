@@ -5,8 +5,9 @@ This is our **smart chicken coop** server. It is providing a web-based backend a
   - [Screenshot](#screenshot)
   - [Hardware](#hardware)
   - [Configuration File](#configuration-file)
+  - [Times relative to sun movement](#times-relative-to-sun-movement)
     - [Hatch Automation](#hatch-automation)
-    - [Heating via light bulb (via shelly)](#heating-via-light-bulb-via-shelly)
+    - [Lighting and heating via light bulb (using Shelly)](#lighting-and-heating-via-light-bulb-using-shelly)
     - [Telegram Messages](#telegram-messages)
   - [Install & Run](#install--run)
   - [Web Endpoints](#web-endpoints)
@@ -17,7 +18,7 @@ This is our **smart chicken coop** server. It is providing a web-based backend a
     - [Administrative](#administrative)
     - [Coop Event Stream](#coop-event-stream)
     - [Shelly Integration](#shelly-integration)
-    - [Heating](#heating)
+    - [Heating / Light](#heating--light)
 
 ## Screenshot
 ![Screenshot of Frontend](https://github.com/thoughtgap/scoop/blob/master/frontend/scoop-screenshot.png?raw=true)
@@ -39,8 +40,8 @@ The control unit consists of:
 ## Configuration File
 Parameters are configured in `config.json`.
 
-### Hatch Automation
-You can maintain fixed times and times relative to `sunset`, `sunrise`, or any other [suncalc](https://github.com/mourner/suncalc) object like `dusk` or `dawn`. For relative times to work, location needs to be maintained in `config.json`. You always have to specify an offset.
+## Times relative to sun movement
+For both hatch automation and lighting schedule, you can  maintain fixed times or times relative to `sunset`, `sunrise`, or any other [suncalc](https://github.com/mourner/suncalc) object like `dusk` or `dawn`. For relative times to work, location needs to be maintained in `config.json`. You always have to specify an offset (if you want something to happen at exactly sunset, use `sunset+0`).
 
 ```json
 "location": {
@@ -53,26 +54,54 @@ You can maintain fixed times and times relative to `sunset`, `sunrise`, or any o
 }
 ```
 
-### Heating via light bulb (via shelly)
-The heating module lights up the (preferrably non-LED) light bulb to warm up the coop if the temperatures are low. The light bulb is operated by a Shelly relay, see below.
+### Hatch Automation
+You can maintain fixed times or times relative to sun movement (see below) to schedule the hatch to open or close.
 
-The coop will only be heated if the current temperature falls below the treshold temperature set in `heatBelowC`.
-To prevent disco feeling, the light stays on for a minimum duration of `minimumHeatingMins` minutes (if it does not run out of time frame within this time).
+```json
+"hatchAutomation": {
+    "openTimes": ["06:30", "08:00", "sunrise+30","sunrise+60","sunrise+120","sunrise+180","sunrise+240","sunrise+300","sunrise+360","sunrise+420"],
+    "closeTimes": ["22:00","sunset-30"]
+}
+```
+
+### Lighting and heating via light bulb (using Shelly)
+You can install a light bulb in the coop for illumination and heating (in this case non-LED is preferred) purposes.
+The light bulb is operated by a Shelly relay, see below.
+
+In the config, you can define conditions for the light to turn on, based on the combination of the following factors:
+* time frame (`from` - `to`, mandatory!) - can be set relative to sun movement
+* current temperature falls below the defined minimum temperature (`heatBelowC`, optional, use null if you don't want to use this) 
+* door state (`door`, accepts open/closed/any) - e.g. only turn light on if door is closed
+* To prevent disco feeling for the chicks, the light stays on for a minimum duration of `minimumLightMins` minutes (if it does not run out of time frame within this time).
+
+I can reliably heat my 1x1m coop with a 60W bulb to keep it above freezing temperatures.
 
 To prevent that the light turns on in the middle of a cold night, the time frame in which the bulb should be used for heating is to be specified in the same notation as the hatch automation times.
 
-The config parameters for the heating are:
+The config parameters for the light are:
 
 ```json
-"heating": {
+  "light": {
     "enabled": true,
-    "heatBelowC": 5,
-    "minimumHeatingMins": 30,
-    "timeFrame": {
-      "from": "sunrise+0",
-      "to": "dusk-60"
-    }
-  }
+    "conditions": [
+      {
+        "door": "closed",
+        "heatBelowC": null,
+        "from": "sunrise+20",
+        "to":   "dusk+30",
+        "enabled": true,
+        "minimumLightMins": 10
+      },
+      {
+        "door": "any",
+        "heatBelowC": 5,
+        "from": "sunrise-20",
+        "to":   "dusk+30",
+        "enabled": true,
+        "minimumLightMins": 10
+      },
+    ]
+  },
 ```
 
 ### Telegram Messages
@@ -150,6 +179,6 @@ In case the Shelly app/web interface is used, shelly also informs the coop if it
 * OUTPUT SWITCHED ON URL: `http://<coop>/shelly/inform/on`
 * OUTPUT SWITCHED OFF URL: `http://<coop>/shelly/inform/off`
 
-### Heating
-* `/heating/enable` turns the heating logic on. beware, light goes on only if all preconditions (time-frame, cold temps) are met!
+### Heating / Light
+* `/heating/enable` turns the lighting logic on. beware, light turns on only if all defined preconditions (time-frame, door state, cold temps) are met.
 * `/heating/disable` turns it off.

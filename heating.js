@@ -11,11 +11,11 @@ var config = {
 /*
     "door": "closed",           // closed, open, any
     "heatBelowC": 5,            // int or null
-    "minimumHeatingMins": 30,   // int or null
+    "minimumLightMins": 30,   // int or null
     "from": "sunrise-20",
     "to":   "dusk+30",
     "enabled": true             // true or false
-    "minimumHeatingMins": 30,   // int or null
+    "minimumLightMins": 30,   // int or null
 */
     ]
 };
@@ -27,7 +27,7 @@ var status = {
     enableHeating: null,
     tooCold: null,
     
-    minimumHeatingMins: null,
+    minimumLightMins: null,
     heatedLongEnough: null,
     heatUntil: null,
 
@@ -38,7 +38,7 @@ var status = {
 }
 
 configure = (lightConfigObj) => {
-    //config.minimumHeatingMins = lightConfigObj.minimumHeatingMins; // int or null
+    //config.minimumLightMins = lightConfigObj.minimumLightMins; // int or null
     status.enableHeating = lightConfigObj.enabled; // true or false
 
     lightConfigObj.conditions.forEach(lightConfig => {
@@ -67,7 +67,7 @@ configure = (lightConfigObj) => {
                 toSuncalc:          lightConfig.to,
                 to:                 toTime,
                 enabled:            lightConfig.enabled,            // true or false
-                minimumHeatingMins: lightConfig.minimumHeatingMins
+                minimumLightMins: lightConfig.minimumLightMins
             });
         }
     });
@@ -84,8 +84,8 @@ const checkTimeFrame = (from,to) => {
 }
 
 const needToHeatLonger = () => {
-    if(status.turnedOn !== null && status.minimumHeatingMins !== null) {        
-        status.heatUntil = status.turnedOn.add(status.minimumHeatingMins,'minutes');
+    if(status.turnedOn !== null && status.minimumLightMins !== null) {        
+        status.heatUntil = status.turnedOn.add(status.minimumLightMins,'minutes');
     }
     
     return (
@@ -169,7 +169,7 @@ const checkLight = (newTemperature = null) => {
         lightConfig.timeFrameOK = timeFrameOK;
         lightConfig.doorOK = doorOK;
         lightConfig.temperatureOK = temperatureOK;
-        status.minimumHeatingMins = lightConfig.minimumHeatingMins;
+        status.minimumLightMins = lightConfig.minimumLightMins;
     });
 
     if(lightNeeded) {
@@ -178,7 +178,7 @@ const checkLight = (newTemperature = null) => {
     }
     else if(needToHeatLonger()) {
         lightNeeded = true;
-        logging.add("Light Check. Not on long enough ("+config.minimumHeatingMins+"min) - Lights on.")
+        logging.add("Light Check. Not on long enough ("+config.minimumLightMins+"min) - Lights on.")
     }
     else {
         logging.add("Light Check. Parameters not met. Lights off.")

@@ -364,7 +364,7 @@
           <span ng-show="lightCycle.heatBelowC">
             wenn unter {{lightCycle.heatBelowC}}°C (aktuell {{coopStatus.bme280.values.temperature | number : 1}}°C)
           </span>
-          <span ng-show="lightCycle.minimumHeatingMins">für mindestens {{lightCycle.minimumHeatingMins}} Minuten</span>.<br />
+          <span ng-show="lightCycle.minimumLightMins">für mindestens {{lightCycle.minimumLightMins}} Minuten</span>.<br />
         </span>
         <p>
           Aktualisiert: <a title="{{coopStatus.heating.status.lastCheck}}"><time am-time-ago="coopStatus.heating.status.lastCheck"></time></a>
