@@ -35,6 +35,9 @@
     "pngjs": "^5.0.0",
     "request": "^2.88.2",
     "simple-node-logger": "^18.12.24",
-    "suncalc": "^1.8.0"
+    "stream": "0.0.2",
+    "stream-buffers": "^3.0.2",
+    "suncalc": "^1.8.0",
+    "telegram-bot-api": "^2.0.1"
   }
 }
