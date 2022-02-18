@@ -47,14 +47,34 @@
     "openTimes": ["06:30","sunrise+30"],
     "closeTimes": ["22:00","sunset-30"]
   },
-  "heating": {
+  "light": {
     "enabled": true,
-    "heatBelowC": 5,
-    "minimumHeatingMins": 30,
-    "timeFrame": {
-      "from": "sunrise+0",
-      "to": "dusk-60"
-    }
+    "conditions": [
+      {
+        "door": "closed",
+        "heatBelowC": null,
+        "from": "sunrise+20",
+        "to":   "dusk+30",
+        "enabled": true,
+        "minimumHeatingMins": 10
+      },
+      {
+        "door": "any",
+        "heatBelowC": 5,
+        "from": "sunrise-20",
+        "to":   "dusk+30",
+        "enabled": true,
+        "minimumHeatingMins": 10
+      },
+      {
+        "door": "any",
+        "heatBelowC": null,
+        "from": "sunset-30",
+        "to":   "dusk+30",
+        "enabled": true,
+        "minimumHeatingMins": null
+      }
+    ]
   },
   "shelly": {
     "url": "xxx",
