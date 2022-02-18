@@ -16,7 +16,6 @@ var status = {
 var config = {
     port: null
 }
-// Todo aus zentraler Configdatei holen.
 
 configure = (port, intervalSec) => {
     status.intervalSec = intervalSec;
