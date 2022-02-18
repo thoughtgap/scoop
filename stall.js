@@ -326,7 +326,7 @@ app.get('/status', function (req, res) {
 });
 app.get('/log', function (req, res) {
   res.send({
-    log: log
+    log: {}
   });
 });
 app.get('/korrigiere/hoch', function (req, res) {

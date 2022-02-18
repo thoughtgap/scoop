@@ -70,7 +70,7 @@ The light bulb is operated by a Shelly relay, see below.
 
 In the config, you can define conditions for the light to turn on, based on the combination of the following factors:
 * time frame (`from` - `to`, mandatory!) - can be set relative to sun movement
-* current temperature falls below the defined minimum temperature (`heatBelowC`, optional, use null if you don't want to use this) 
+* current temperature falls below the defined minimum temperature (`heatBelowC`, optional, set to `null` if you don't want to use this) 
 * door state (`door`, accepts open/closed/any) - e.g. only turn light on if door is closed
 * To prevent disco feeling for the chicks, the light stays on for a minimum duration of `minimumLightMins` minutes (if it does not run out of time frame within this time).
 
@@ -122,16 +122,16 @@ Run with `node stall.js`. I host the service with [pm2](https://pm2.keymetrics.i
 ### General
 * `/frontend/index.html` A hacky frontend (AngularJS)
 * `/status` Status as JSON-Object
-* `/log` Latest log messages
+* ~~`/log` Latest log messages~~ (not implemented)
 
 ### Hatch
 Moves the hatch up or down for a specified duration (`config.maxSekundenEinWeg`).
-* `/hoch` Move hatch up ()
+* `/hoch` Move hatch up
 * `/runter` Move hatch down
 
 Move the hatch for a specified duration (in seconds) - be careful!
-* `/hoch/:wielange`
-* `/runter/:wielange`
+* `/hoch/:duration`
+* `/runter/:duration`
 
 #### Corrections
 If the hatch is not entirely open/closed, small correction movements can be fired which won't affect the up/down position.
