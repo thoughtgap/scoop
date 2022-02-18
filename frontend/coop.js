@@ -1,17 +1,36 @@
 angular.module('todoApp', ['angularMoment'])
   .run(function(amMoment) {
     amMoment.changeLocale('de');
-});
+  }
+);
 
 angular.module('todoApp', ['angularMoment'])
   .controller('coopCtrl', ['$scope', '$http', 'moment', function($scope, $http, moment) {
+    $scope.moment = moment;
 
+    moment.locale('de', {
+      relativeTime : {
+          future: "in %s",
+          past:   "vor %s",
+          s:  "%d Sekunden",
+          m:  "einer Minute",
+          mm: "%d Minuten",
+          h:  "einer Stunde",
+          hh: "%d Stunden",
+          d:  "einem Tag",
+          dd: "%d Tagen",
+          M:  "einem Monat",
+          MM: "%d Monaten",
+          y:  "einem Jahr",
+          yy: "%d Jahren"
+      }
+    });
     
     $scope.coopStatus = {};
     $scope.coopStatusLaedt = false;
     $scope.coopStatusVonWann = null;
 
-    const coopUrl = 'http://192.168.31.21:3000/';
+    const coopUrl = '/';
 
     $scope.camera = {
       url: null,
