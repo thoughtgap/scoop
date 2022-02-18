@@ -2,6 +2,7 @@ var logging = require('./logging.js');
 var gpioMotor = require('./gpio-relais.js');
 var events = require('./events.js');
 var camera = require('./camera.js');
+var heating = require('./heating.js');
 
 var klappe = {
     status: "not initialized",
@@ -107,6 +108,8 @@ const setKlappenPosition = (obenUnten) => {
     }
     klappe.position = obenUnten;
     events.send('klappenPosition',obenUnten);
+
+    heating.checkLight();
 }
 
 const manuelleInitialPosition = (pos) => {

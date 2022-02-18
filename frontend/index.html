@@ -257,12 +257,19 @@
           ↘
         </span>
 
-        &nbsp;&nbsp;&nbsp;
+        <br />
         <span ng-show="coopStatus.shelly.relay.ison">
           💡 Licht ist an {{coopStatus.heating.status.heating ? ' (🌞 heizen)' : ''}} <a href="" ng-click="schalteLicht(false)">aus</a><br />
         </span>
         <span ng-show="!coopStatus.shelly.relay.ison">
-          🌌 Licht ist aus <a href="" ng-click="schalteLicht(true)">an</a><br />
+          🌌 Licht ist aus <a href="" ng-click="schalteLicht(true)">an</a>
+        </span>
+
+        <span ng-show="coopStatus.heating.status.enableHeating">
+          <a href="" ng-click="schalteHeizung(false)">Heizung aus</a>
+        </span>
+        <span ng-show="!coopStatus.heating.status.enableHeating">
+          <a href="" ng-click="schalteHeizung(true)">heizen</a>
         </span>
         
       </h3>
@@ -295,42 +302,18 @@
     </div>
 
     <div class="floaters">
-      <h3>🎬 Klappe</h3>
+      <h3>🤖 Automatisierung</h3>
       <div>
-        Aktualisiert: <a title="{{coopStatus.klappe.zeit}}"><time am-time-ago="coopStatus.klappe.zeit"></time></a><br />
-        Status: {{coopStatus.klappe.status}}<br />
-        Position: {{coopStatus.klappe.position}}<br />
-        PositionNum: {{coopStatus.klappe.positionNum}}<br />
-        Fahrdauer: {{coopStatus.klappe.fahrDauer}}<br />
-        hochSek: {{coopStatus.klappe.hochSek}}<br />
-        runterSek: {{coopStatus.klappe.runterSek}}<br />
-
-        Vorher: {{coopStatus.klappe.previous.status}} {{coopStatus.klappe.previous.position}} <a
-          title="{{coopStatus.klappe.previous.zeit}}"><time am-time-ago="coopStatus.klappe.previous.zeit"></time></a>
-
-        <p>
-          <a href="" ng-click="fahreKlappe('hoch')">Hoch fahren</a><br />
-        </p>
-        <p>
-          <a href="" ng-click="fahreKlappe('runter')">Runter fahren</a><br />
-        </p>
-        <p>
-          Success: {{fahreStatus.success}}<br />
-          Message: {{fahreStatus.message}}<br />
-          <time am-time-ago="fahreStatusVonWann"></time>
-        </p>
-
-        <p>
-          <h3>Automatisierung</h3>
-          <ul>
-            <li ng-repeat="job in coopStatus.cron.jobs">
-              {{job.time}} - {{ job.action }} <span ng-show="job.time != job.command">({{job.command}})</span>
-            </li>
-          </ul>
-          Eingeplant <time am-time-ago="coopStatus.cron.setup"></time>
-        </p>
-      </div>
+      <ul>
+        <li ng-repeat="job in coopStatus.cron.jobs">
+          <span ng-show="job.action == 'checkLight'">💡</span>
+          <span ng-show="job.action == 'close' || job.action == 'open'">🚪</span>
+          {{job.time}} - {{ job.action }} <span ng-show="job.time != job.command">({{job.command}})</span>
+        </li>
+      </ul>
+      Eingeplant <time am-time-ago="coopStatus.cron.setup"></time>
     </div>
+  </div>
     
     <div class="floaters">
       
@@ -373,16 +356,16 @@
           , bis mindestens <a title="{{coopStatus.heating.status.heatUntil}}"><time am-time-ago="coopStatus.heating.status.heatUntil"></time></a>
         </span><br />
 
-        
-        <span ng-show="coopStatus.bme280.values.temperature < coopStatus.heating.config.heatBelowC">
-          🥶 Temperatur: Zu kalt, {{coopStatus.bme280.values.temperature | number : 1}}°C &lt; {{coopStatus.heating.config.heatBelowC | number}}°C
+        <span ng-repeat="lightCycle in coopStatus.heating.config.conditions">
+          {{lightCycle.lightNeeded ? '👍' : '🙅‍♂️' }}
+          {{lightCycle.heatBelowC ? 'Heize' : 'Beleuchte' }} zwischen {{lightCycle.from.h}}:{{lightCycle.from.m <= 9 ? '0' : ''}}{{lightCycle.from.m}} - {{lightCycle.to.h}}:{{lightCycle.to.m <= 9 ? '0' : ''}}{{lightCycle.to.m}}
+          <span ng-show="lightCycle.door == 'closed'">bei geschlossener Tür</span>
+          <span ng-show="lightCycle.door == 'open'">bei offener Tür</span>
+          <span ng-show="lightCycle.heatBelowC">
+            wenn unter {{lightCycle.heatBelowC}}°C (aktuell {{coopStatus.bme280.values.temperature | number : 1}}°C)
+          </span>
+          <span ng-show="lightCycle.minimumHeatingMins">für mindestens {{lightCycle.minimumHeatingMins}} Minuten</span>.<br />
         </span>
-        <span ng-show="coopStatus.bme280.values.temperature >= coopStatus.heating.config.heatBelowC">
-          🏜 Temperatur: Warm genug {{coopStatus.bme280.values.temperature | number : 1}}°C ≥ {{coopStatus.heating.config.heatBelowC | number}}°C
-        </span>
-        <br />
-        {{coopStatus.heating.status.inTimeFrame ? '👍' : '🙅‍♂️' }} Heiz-Zeitraum: {{coopStatus.heating.config.timeFrame.from.h}}:{{coopStatus.heating.config.timeFrame.from.m <= 9 ? '0' : ''}}{{coopStatus.heating.config.timeFrame.from.m}} - {{coopStatus.heating.config.timeFrame.to.h}}:{{coopStatus.heating.config.timeFrame.to.m <= 9 ? '0' : ''}}{{coopStatus.heating.config.timeFrame.to.m}}<br />
-        
         <p>
           Aktualisiert: <a title="{{coopStatus.heating.status.lastCheck}}"><time am-time-ago="coopStatus.heating.status.lastCheck"></time></a>
         </p>
@@ -421,13 +404,13 @@
           </span> <time am-time-ago="coopStatus.bme280.time"></time><br />
         </p>
         <p>
-          CPU: {{coopStatus.cpuTemp.values.temperature}}°C (<time am-time-ago="coopStatus.cpu.time"></time>)
+          CPU: {{coopStatus.cpuTemp.values.temperature}}°C (<time am-time-ago="coopStatus.cpuTemp.time"></time>)
           (alle {{coopStatus.cpuTemp.intervalSec}}s)
         <p ng-show="coopStatus.cpuTemp.error">
           Fehler: {{coopStatus.cpuTemp.error}}
         </p>
         </p>
-        <p>
+        <!-- <p>
           Oben: <span ng-show="!coopStatus.sensorObenMontiert">nicht </span>montiert,
           {{coopStatus.sensoren.sensorOben.text}} (<a title="{{coopStatus.sensoren.sensorOben.time}}"><time
               am-time-ago="coopStatus.sensoren.sensorOben.time"></time></a>) {{coopStatus.sensoren.sensorOben.error}}
@@ -436,31 +419,72 @@
           Unten: <span ng-show="!coopStatus.sensorUntenMontiert">nicht </span>montiert,
           {{coopStatus.sensoren.sensorUnten.text}} (<a title="{{coopStatus.sensoren.sensorUnten.time}}"><time
               am-time-ago="coopStatus.sensoren.sensorUnten.time"></time></a>) {{coopStatus.sensoren.sensorUnten.error}}
-        </p>
-        alle {{coopStatus.sensoren.intervalSec}}s
+        </p> -->
+        <!-- alle {{coopStatus.sensoren.intervalSec}}s -->
       </div>
     </div>
+
+    <div class="floaters">
+      <h3>🎬 Klappe</h3>
+      <div>
+        Aktualisiert: <a title="{{coopStatus.klappe.zeit}}"><time am-time-ago="coopStatus.klappe.zeit"></time></a><br />
+        Status: {{coopStatus.klappe.status}}<br />
+        Position: {{coopStatus.klappe.position}}<br />
+        PositionNum: {{coopStatus.klappe.positionNum}}<br />
+        Fahrdauer: {{coopStatus.klappe.fahrDauer}}<br />
+        hochSek: {{coopStatus.klappe.hochSek}}<br />
+        runterSek: {{coopStatus.klappe.runterSek}}<br />
+
+        Vorher: {{coopStatus.klappe.previous.status}} {{coopStatus.klappe.previous.position}} <a
+          title="{{coopStatus.klappe.previous.zeit}}"><time am-time-ago="coopStatus.klappe.previous.zeit"></time></a>
+
+        <p>
+          <a href="" ng-click="fahreKlappe('hoch')">Hoch fahren</a><br />
+        </p>
+        <p>
+          <a href="" ng-click="fahreKlappe('runter')">Runter fahren</a><br />
+        </p>
+        <p>
+          Success: {{fahreStatus.success}}<br />
+          Message: {{fahreStatus.message}}<br />
+          <time am-time-ago="fahreStatusVonWann"></time>
+        </p>
+        </div>
+      </div>
 
     <div class="floaters">
       <h3>🛠 Initialisieren</h3>
       <p>
         <a href="" ng-click="klappeIst('oben')">Klappe ist jetzt oben</a><br />
         <a href="" ng-click="klappeIst('unten')">Klappe ist jetzt unten</a><br />
-      <p>
-        Success: {{kalibriereStatus.success}}<br />
-        Message: {{kalibriereStatus.message}}<br />
-        <time am-time-ago="kalibriereStatusVonWann"></time>
+        <p ng-show="kalibriereStatus.success || kalibriereStatus.message">
+          Success: {{kalibriereStatus.success}}<br />
+          Message: {{kalibriereStatus.message}}<br />
+          <time am-time-ago="kalibriereStatusVonWann"></time>
+        </p>
       </p>
+      <p>
+        <span>Klappe: {{coopStatus.klappe.status}}</span>
+        <span ng-show="coopStatus.klappe.position"> {{coopStatus.klappe.position}}</span>
+        <span ng-show="coopStatus.klappe.position === null">
+          <a href="" ng-click="klappeIst('oben')">ist oben</a> 
+          <a href="" ng-click="klappeIst('unten')">ist unten</a>
+        </span>
+        <span ng-show="coopStatus.klappe.position === 'oben'">
+          <a href="" ng-click="fahreKlappe('runter')">runter</a>
+        </span>
+        <span ng-show="coopStatus.klappe.position === 'unten'">
+          <a href="" ng-click="fahreKlappe('hoch')">hoch</a>
+        </span>
       </p>
       <p>
-
         <a href="" ng-click="klappeKorrigieren('hoch')">Korrigiere etwas nach oben</a><br />
         <a href="" ng-click="klappeKorrigieren('runter')">Korrigiere etwas nach unten</a><br />
-      <p>
-        Success: {{korrigierStatus.success}}<br />
-        Message: {{korrigierStatus.message}}<br />
-        <time am-time-ago="korrigierStatusVonWann"></time>
-      </p>
+        <p ng-show="korrigierStatus.success || korrigierStatus.message">
+          Success: {{korrigierStatus.success}}<br />
+          Message: {{korrigierStatus.message}}<br />
+          <time am-time-ago="korrigierStatusVonWann"></time>
+        </p>
       </p>
     </div>
 
@@ -477,9 +501,9 @@
       </p>
     </div>
 
-    <div class="floaters">
+    <!-- <div class="floaters">
       <pre>{{coopStatus}}</pre>
-    </div>
+    </div> -->
 
   </div>
 </body>

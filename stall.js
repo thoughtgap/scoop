@@ -237,11 +237,17 @@ klappenModul.init();
 var camera = require('./camera.js');
 camera.configure(config.camera.intervalSec, config.camera.maxAgeSec, config.camera.autoTakeMin);
 
+var suncalcHelper = require('./suncalc.js');
+suncalcHelper.configure(config.location.lat,config.location.lon);
+
 var heating = require('./heating.js');
-heating.configure(config.heating.heatBelowC, config.heating.minimumHeatingMins, config.heating.enabled);
+heating.configure(config.light);
 
 var cronTasks = require('./cron-tasks.js');
-cronTasks.configure(config.location, config.hatchAutomation, config.heating.timeFrame);
+cronTasks.configure(  config.location
+                    , config.hatchAutomation
+                    , config.heating.timeFrame
+                    , config.light);
 
 var shelly = require('./shelly.js');
 shelly.configure(config.shelly.url, config.shelly.intervalSec);

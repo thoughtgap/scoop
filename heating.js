@@ -2,16 +2,23 @@ var logging = require('./logging.js');
 var shelly = require('./shelly.js');
 var moment = require('moment');
 var events = require('./events.js');
+var suncalcHelper = require('./suncalc.js');
+var klappenModul = require('./klappe.js');
+var bme280 = require('./temperature-bme280.js');
 
 var config = {
-    enabled: null,
-    heatBelowC: null,
-    minimumHeatingMins: null,
-    timeFrame: {
-        from: {h: 7, m: 0},
-        to: {h: 20, m: 0}
-    }
-}
+    "conditions": [
+/*
+    "door": "closed",           // closed, open, any
+    "heatBelowC": 5,            // int or null
+    "minimumHeatingMins": 30,   // int or null
+    "from": "sunrise-20",
+    "to":   "dusk+30",
+    "enabled": true             // true or false
+    "minimumHeatingMins": 30,   // int or null
+*/
+    ]
+};
 
 var status = {
     heating: null,
@@ -20,6 +27,7 @@ var status = {
     enableHeating: null,
     tooCold: null,
     
+    minimumHeatingMins: null,
     heatedLongEnough: null,
     heatUntil: null,
 
@@ -27,48 +35,69 @@ var status = {
     lastChange: null,
     turnedOn: null,
     turnedOff: null,
-
-
 }
 
-configure = (heatBelowC, minimumHeatingMins, enabled) => {
-    config.heatBelowC = heatBelowC;
-    config.minimumHeatingMins = minimumHeatingMins;
-    config.enabled = enabled;
-    status.enableHeating = enabled; // Initial value.
-    
-    // timeFrame is coming from cron-tasks
+configure = (lightConfigObj) => {
+    //config.minimumHeatingMins = lightConfigObj.minimumHeatingMins; // int or null
+    status.enableHeating = lightConfigObj.enabled; // true or false
 
-    logging.add("Heating Configure: heatBelowC:"+heatBelowC+" minimumHeatingMins:"+minimumHeatingMins+" enabled:"+enabled);
+    lightConfigObj.conditions.forEach(lightConfig => {
+        if(lightConfig.enabled) {
+
+            // Type checking
+            if(!lightConfig.door.match(/^open|closed|any$/)) {
+                logging.add("Invalid value for 'door' in light configuration. Set to closed|open|any.","warn");
+                return;
+            }
+
+            // Time checking
+            const fromTime = suncalcHelper.suncalcStringToTime(lightConfig.from);
+            const toTime   = suncalcHelper.suncalcStringToTime(lightConfig.to);
+
+            if(!fromTime || !toTime) {
+                logging.add("Invalid Time for Light Configuration.","warn");
+                return;
+            }
+
+            config.conditions.push({
+                door:               lightConfig.door,               // closed/open/any
+                heatBelowC:         lightConfig.heatBelowC,         // int or null
+                fromSuncalc:        lightConfig.from,
+                from:               fromTime,
+                toSuncalc:          lightConfig.to,
+                to:                 toTime,
+                enabled:            lightConfig.enabled,            // true or false
+                minimumHeatingMins: lightConfig.minimumHeatingMins
+            });
+        }
+    });
+
+    logging.add("Heating Configure New");
 };
 
-const getAllowHeating = () => {
-    return config.enabled && status.enableHeating;
+const checkTimeFrame = (from,to) => {
+    const minutesNow  = parseInt(moment().format('H'))*60 + parseInt(moment().format('m'));
+    const minutesFrom = parseInt(from.h)*60 + parseInt(from.m);
+    const minutesTo   = parseInt(to.h)*60 + parseInt(to.m);
+
+    return (minutesFrom <= minutesNow  && minutesTo >= minutesNow );
 }
 
-const setTimeFrameFrom = (from) => {
-    // expects object with {h: hours, m: mins}
-    config.timeFrame.from = from;
-}
-const setTimeFrameTo = (to) => {
-    // expects object with {h: hours, m: mins}
-    config.timeFrame.to = to;
-}
-
-const inHeatingTimeFrame = () => {
-    const minutesOfToday = parseInt(moment().format('H'))*60 + parseInt(moment().format('m'));
-    const minutesFrom = parseInt(config.timeFrame.from.h)*60 + parseInt(config.timeFrame.from.m);
-    const minutesTo = parseInt(config.timeFrame.to.h)*60 + parseInt(config.timeFrame.to.m);
-
-    return (minutesFrom <= minutesOfToday
-        && minutesTo >= minutesOfToday);
-}
-
-const heatedLongEnough = () => {
-    return status.heating === true && status.turnedOn.add(status.minimumHeatingMins,'minutes') <= status.turnedOn;
+const needToHeatLonger = () => {
+    if(status.turnedOn !== null && status.minimumHeatingMins !== null) {        
+        status.heatUntil = status.turnedOn.add(status.minimumHeatingMins,'minutes');
+    }
+    
+    return (
+        status.heating === true
+        && status.turnedOn !== null
+        && status.heatUntil >= moment()
+    );
 }
 
 const setEnableHeating = (boolYesNo) => {
+    // For GUI Usage
+
     if(boolYesNo === true) {
         status.enableHeating = true;
     }
@@ -90,7 +119,6 @@ const setHeating = (boolOnOff) => {
                 shelly.turnShellyRelay('on');
             }
             status.turnedOn = moment();
-            status.heatUntil = moment(status.turnedOn).add(config.minimumHeatingMins,'minutes');
         }
         else if(boolOnOff === false) {
             if(shelly.status.relay.ison) {
@@ -98,55 +126,72 @@ const setHeating = (boolOnOff) => {
             }
             status.turnedOff = moment();
             status.heatUntil = null;
-            
         }
         sendEventStatus();
     }
 }
 
-const checkHeating = (currentTemp=null,historicTemp=null) => {
-    
-    
+const getTemperature = () => {
+    return bme280.status.temperature;
+}
+
+const checkLight = (newTemperature = null) => {
     status.lastCheck = moment();
-    status.inTimeFrame = inHeatingTimeFrame();
-    status.tooCold = currentTemp <= config.heatBelowC;
-    status.heatedLongEnough = heatedLongEnough();
-    status.allowHeating = getAllowHeating();
 
-    let heatNow = false;
+    let lightNeeded =  false;
 
-    if( status.inTimeFrame
-        && status.allowHeating
-        && currentTemp !== null
-        && historicTemp !== null
-      ) {
-          
-          if(status.heating && !status.heatedLongEnough) {
-              logging.add("Heating Check. In Time Frame. Haven't heated long enough ("+config.minimumHeatingMins+"min) - keep heating.")
-              heatNow = true;
-            }
-            else if (status.tooCold) {
-                logging.add("Heating Check. In Time Frame. It's cold! Let's heat.");
-                heatNow = true;
-            }
-            else {    
-                logging.add("Heating Check. In Time Frame. Not cold enough.","debug");
-            }
+    config.conditions.forEach(lightConfig => {
+
+        // Check Timeframe
+        const timeFrameOK = checkTimeFrame(lightConfig.from,lightConfig.to);
+
+        // Check Door
+        const doorOK = (
+               (lightConfig.door == "closed" && klappenModul.klappe.position == "unten")
+            || (lightConfig.door == "open"   && klappenModul.klappe.position == "oben")
+            || (lightConfig.door == "any")
+        );
+
+        
+
+        // Check if it's too cold
+        const temperatureOK = (
+            lightConfig.heatBelowC === null
+            || (newTemperature === null ? getTemperature() : newTemperature) <= lightConfig.heatBelowC 
+        );
+
+        
+        if(timeFrameOK && doorOK && temperatureOK) {
+            lightNeeded = true;
+        }
+        
+        lightConfig.lightNeeded = lightNeeded;
+        lightConfig.timeFrameOK = timeFrameOK;
+        lightConfig.doorOK = doorOK;
+        lightConfig.temperatureOK = temperatureOK;
+        status.minimumHeatingMins = lightConfig.minimumHeatingMins;
+    });
+
+    if(lightNeeded) {
+        // Heated long enough?
+        logging.add("Light Check. Parameters met. Lights on.")
     }
-    if(status.heating && !heatNow) {
-        logging.add("Heating Check. Turning heating off.");
+    else if(needToHeatLonger()) {
+        lightNeeded = true;
+        logging.add("Light Check. Not on long enough ("+config.minimumHeatingMins+"min) - Lights on.")
+    }
+    else {
+        logging.add("Light Check. Parameters not met. Lights off.")
     }
 
-    setHeating(heatNow);
-};
+    setHeating(lightNeeded);
+}
 
 const sendEventStatus = () => {
     events.send('heating',status);
 }
 
 exports.setEnableHeating = setEnableHeating;
-exports.setTimeFrameFrom = setTimeFrameFrom;
-exports.setTimeFrameTo = setTimeFrameTo;
 exports.configure = configure;
 
 exports.status = {
@@ -154,4 +199,4 @@ exports.status = {
     status: status
 };
 
-exports.checkHeating = checkHeating;
+exports.checkLight = checkLight;
