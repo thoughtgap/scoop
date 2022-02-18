@@ -33,7 +33,7 @@ var cameraConfig = {
         encoding: 'jpg',
         width: 1296,
         height: 972,
-        quality: 50
+        quality: 20
     }
 }
 
@@ -72,7 +72,6 @@ queueTelegram = () => {
 }
 
 takePhoto = (nightVision = false, sendTelegramMessage = false) => {
-
     let now = new Date();
     let max = camera.timeNextImage;
 
@@ -81,15 +80,17 @@ takePhoto = (nightVision = false, sendTelegramMessage = false) => {
       nightVision = true;
     }
 
+    // Is it really necessary to take another picture?
     if(now <= max && !nightVision) {
         logging.add("Not taking picture. Picture still good.","debug");
         return "picture still good";
     }
     else if(camera.busy) {
-        logging.add("Not taking picture. Camera busy."),"debug";
-        return "camera busy";
+      logging.add("Not taking picture. Camera busy."),"debug";
+      return "camera busy";
     }
     else {
+
       if(nightVision && !gpioRelais.setNightVision(true)) {
         logging.add(`Could not turn on Night Vision`, 'warn');
       }
@@ -150,17 +151,21 @@ takePhoto = (nightVision = false, sendTelegramMessage = false) => {
           cameraTimeStats = [];
         }
 
+        
         // Schedule taking the next picture (only non-night vision)
-        if(camera.lastRequest && !nightVision) {
+        if(camera.lastRequest /*&& !nightVision*/) {
 
           let takeUntil = camera.lastRequest.clone();
           takeUntil.add(camera.autoTakeMin,'minutes');
     
           if(moment() < takeUntil) {
-            logging.add(`Taking another picture in ${camera.intervalSec}s. Last Request ${camera.lastRequest.format('HH:mm:ss')}, taking for ${camera.autoTakeMin}min until ${takeUntil.format('HH:mm:ss')}`);
+            let nextPictureInSec = (camera.statistics.avg ? camera.statistics.avg : camera.intervalSec) + 0.1;
+            logging.add(nextPictureInSec * 1000);
+
+            logging.add(`Taking another picture in ${nextPictureInSec}s. Last Request ${camera.lastRequest.format('HH:mm:ss')}, taking for ${camera.autoTakeMin}min until ${takeUntil.format('HH:mm:ss')}`);
             setTimeout(function nextPicPls() {
               takePhoto();
-            }, camera.intervalSec * 1000);
+            }, nextPictureInSec * 1000);
           }
         }
       });
