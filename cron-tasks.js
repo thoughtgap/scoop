@@ -25,12 +25,11 @@ let cronStatus = {
     jobs: []
 }
 
-configure = (location, hatchAutomation, heatingTimeFrame, lightConfigObj) => {
+configure = (location, hatchAutomation, lightConfigObj) => {
     cronConfig.location.lat = parseFloat(location.lat);
     cronConfig.location.lon = parseFloat(location.lon);
     cronConfig.hatchAutomation.openTimes = hatchAutomation.openTimes;
     cronConfig.hatchAutomation.closeTimes = hatchAutomation.closeTimes;
-    cronConfig.heatingTimeFrame = heatingTimeFrame;
 
 
     if(lightConfigObj.enabled) {

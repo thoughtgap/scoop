@@ -246,7 +246,6 @@ heating.configure(config.light);
 var cronTasks = require('./cron-tasks.js');
 cronTasks.configure(  config.location
                     , config.hatchAutomation
-                    , config.heating.timeFrame
                     , config.light);
 
 var shelly = require('./shelly.js');
