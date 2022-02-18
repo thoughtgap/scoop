@@ -65,7 +65,8 @@ You can maintain fixed times or times relative to sun movement (see below) to sc
 ```
 
 ### Lighting and heating via light bulb (using Shelly)
-You can install a light bulb in the coop for illumination and heating (in this case non-LED is preferred) purposes.
+You can 
+a light bulb in the coop for illumination and heating (in this case non-LED is preferred) purposes.
 The light bulb is operated by a Shelly relay, see below.
 
 In the config, you can define conditions for the light to turn on, based on the combination of the following factors:
@@ -112,7 +113,7 @@ For the bot configuration, you'll need a token and chat ID, see [Telegram Bot AP
 ![Screenshot of Telegram Message](https://github.com/thoughtgap/scoop/blob/master/docs/telegram-bot.png?raw=true)
 
 ## Install & Run
-Install with `npm install`.
+Use NodeJS Version 12. Install with `npm install`.
 
 Run with `node stall.js`. I host the service with [pm2](https://pm2.keymetrics.io/).
 
