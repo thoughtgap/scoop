@@ -1,7 +1,7 @@
 {
   "skipGpio": {
     "motor": true,
-    "dht22": true,
+    "dht22": false,
     "sensoren": true,
     "bme280": true,
     "cputemp": true,
@@ -56,7 +56,7 @@
         "from": "sunrise+20",
         "to":   "dusk+30",
         "enabled": true,
-        "minimumHeatingMins": 10
+        "minimumLightMins": 10
       },
       {
         "door": "any",
@@ -64,7 +64,7 @@
         "from": "sunrise-20",
         "to":   "dusk+30",
         "enabled": true,
-        "minimumHeatingMins": 10
+        "minimumLightMins": 10
       },
       {
         "door": "any",
@@ -72,7 +72,7 @@
         "from": "sunset-30",
         "to":   "dusk+30",
         "enabled": true,
-        "minimumHeatingMins": null
+        "minimumLightMins": null
       }
     ]
   },
