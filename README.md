@@ -21,7 +21,7 @@ This is our **smart chicken coop** server. It is providing a web-based backend a
     - [Heating / Light](#heating--light)
 
 ## Screenshot
-![Screenshot of Frontend](https://github.com/thoughtgap/scoop/blob/master/frontend/scoop-screenshot.png?raw=true)
+![Screenshot of Frontend](https://github.com/thoughtgap/scoop/blob/master/docs/scoop-screenshot.png?raw=true)
 
 ## Hardware
 The control unit consists of:
