@@ -3,6 +3,7 @@ var gpioMotor = require('./gpio-relais.js');
 var events = require('./events.js');
 var camera = require('./camera.js');
 var heating = require('./heating.js');
+const fs = require('fs');
 
 var klappe = {
     status: "not initialized",
@@ -45,13 +46,23 @@ const configure = (
 const init = () => {
     logging.add('Initializing hatch 🐔 pok', 'info');
 
-    // Die manuelle Initialposition ist immer wichtiger als die automatische
-    if (initialPositionManuell !== null) {
-        initialPosition = initialPositionManuell;
-        logging.add(`Initialposition: ${initialPosition} - aus manueller Angabe übernommen.`);
-        logging.add("Erfolgreich initalisiert.");
-        return true;
-    }
+    fs.readFile('klappenPosition.json', (err, data) => {
+        if (err) {
+            logging.add("Could not write klappenPosition.json "+err,"warn");
+            return false;
+        }
+
+        this.kalibriere(JSON.parse(data));
+        logging.add("Read klappenPosition.json --> "+data);
+    });
+
+    // // Die manuelle Initialposition ist immer wichtiger als die automatische
+    // if (initialPositionManuell !== null) {
+    //     initialPosition = initialPositionManuell;
+    //     logging.add(`Initialposition: ${initialPosition} - aus manueller Angabe übernommen.`);
+    //     logging.add("Erfolgreich initalisiert.");
+    //     return true;
+    // }
 
     // // Ableitung der Initialposition aus den aktuellen Sensorständen
     // let posWahrscheinlich = [];
@@ -108,6 +119,16 @@ const setKlappenPosition = (obenUnten) => {
     }
     klappe.position = obenUnten;
     events.send('klappenPosition',obenUnten);
+
+    // Write to file
+    fs.writeFile("klappenPosition.json", JSON.stringify(klappe.position), 'utf8', function (err) {
+        if (err) {
+            logging.add("Could not write klappenPosition.json "+err,"warn");
+            return false;
+        }
+        logging.add("Wrote klappenPosition.json");
+    });
+
 
     heating.checkLight();
 }
