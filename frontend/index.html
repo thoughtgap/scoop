@@ -259,19 +259,23 @@
 
         <br />
         <span ng-show="coopStatus.shelly.relay.ison">
-          💡 Licht ist an {{coopStatus.heating.status.heating ? ' (🌞 heizen)' : ''}} <a href="" ng-click="schalteLicht(false)">aus</a><br />
+          💡 Licht ist an
         </span>
         <span ng-show="!coopStatus.shelly.relay.ison">
           🌌 Licht ist aus <a href="" ng-click="schalteLicht(true)">an</a>
         </span>
 
-        <span ng-show="coopStatus.heating.status.enableHeating">
-          <a href="" ng-click="schalteHeizung(false)">Heizung aus</a>
-        </span>
-        <span ng-show="!coopStatus.heating.status.enableHeating">
-          <a href="" ng-click="schalteHeizung(true)">heizen</a>
-        </span>
-        
+          <span ng-show="coopStatus.heating.status.lightOn">
+            (💡 beleuchten 
+            <a href="" ng-click="schalteBeleuchtung(false)">aus</a>)
+          </span>
+          <span ng-show="coopStatus.heating.status.heatingOn">
+            (🌞 heizen 
+            <a href="" ng-click="schalteHeizung(false)">aus</a>)
+          </span>
+          <span ng-show="coopStatus.shelly.relay.ison && !coopStatus.heating.status.heatingOn && !coopStatus.heating.status.lightOn">
+            <a href="" ng-click="schalteLicht(false)">aus</a>
+          </span>        
       </h3>
     </div>
     <div class="floaters">
@@ -343,12 +347,23 @@
       <div>
         <p>
           <span ng-show="coopStatus.heating.status.enableHeating">
-            Betriebsbereit! <a href="" ng-click="schalteHeizung(false)">Abschalten</a>
+            Heizung betriebsbereit! <a href="" ng-click="schalteHeizung(false)">Abschalten</a>
           </span>
           <span ng-show="!coopStatus.heating.status.enableHeating">
-            Nicht eingeplant. <a href="" ng-click="schalteHeizung(true)">Anschalten</a>
+            Heizung nicht eingeplant. <a href="" ng-click="schalteHeizung(true)">Anschalten</a>
           </span>
         </p>
+
+        <p>
+          <span ng-show="coopStatus.heating.status.enableLight">
+            Beleuchtung bei Bedarf. <a href="" ng-click="schalteBeleuchtung(false)">Abschalten</a>
+          </span>
+          <span ng-show="!coopStatus.heating.status.enableLight">
+            Keine Beleuchtung. <a href="" ng-click="schalteBeleuchtung(true)">Beleuchtung bei Bedarf aktivieren.</a>
+          </span>
+        </p>
+
+
         
         {{coopStatus.heating.status.heating ? '🌞 Heizt: ja' : '🌚 Heizt: nein'}}
         <a title="{{coopStatus.heating.status.lastChange}}">seit <time am-time-ago="coopStatus.heating.status.lastChange"></time></a>

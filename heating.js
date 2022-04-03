@@ -23,8 +23,12 @@ var config = {
 var status = {
     heating: null,
 
+    heatingOn: null,
+    lightOn: null,
+
     inTimeFrame: null,
     enableHeating: null,
+    enableLight: null,
     tooCold: null,
     
     minimumLightMins: null,
@@ -40,6 +44,7 @@ var status = {
 configure = (lightConfigObj) => {
     //config.minimumLightMins = lightConfigObj.minimumLightMins; // int or null
     status.enableHeating = lightConfigObj.enabled; // true or false
+    status.enableLight   = lightConfigObj.enabled;
 
     lightConfigObj.conditions.forEach(lightConfig => {
         if(lightConfig.enabled) {
@@ -97,14 +102,26 @@ const needToHeatLonger = () => {
 
 const setEnableHeating = (boolYesNo) => {
     // For GUI Usage
-
     if(boolYesNo === true) {
         status.enableHeating = true;
     }
     else if(boolYesNo === false) {
         status.enableHeating = false;
     }
-    events.send('heating',status);
+    checkLight();
+    sendEventStatus();
+}
+
+const setEnableLight = (boolYesNo) => {
+    // For GUI Usage
+    if(boolYesNo === true) {
+        status.enableLight = true;
+    }
+    else if(boolYesNo === false) {
+        status.enableLight = false;
+    }
+    checkLight();
+    sendEventStatus();
 }
 
 const setHeating = (boolOnOff) => {
@@ -147,29 +164,42 @@ const checkLight = (newTemperature = null) => {
 
         // Check Door
         const doorOK = (
-               (lightConfig.door == "closed" && klappenModul.klappe.position == "unten")
+               (lightConfig.door == "closed" && (klappenModul.klappe.position == "unten" && klappenModul.klappe.position !== null))
             || (lightConfig.door == "open"   && klappenModul.klappe.position == "oben")
             || (lightConfig.door == "any")
         );
 
-        
-
         // Check if it's too cold
+        // logging.add("------");
+        // logging.add("Heatbelow " + lightConfig.heatBelowC + " EnableLight " + status.enableLight + " NewTemp " + newTemperature + " EnableHeating " + status.enableHeating);
         const temperatureOK = (
-            lightConfig.heatBelowC === null
-            || (newTemperature === null ? getTemperature() : newTemperature) <= lightConfig.heatBelowC 
+            (lightConfig.heatBelowC === null && status.enableLight)
+            ||
+            ((newTemperature === null ? getTemperature() : newTemperature) <= lightConfig.heatBelowC && status.enableHeating)
         );
 
-        
+        // Determine whether light or heating
+        if(lightConfig.heatBelowC === null && status.enableLight)
+
+        // logging.add("Heating/Light Params: Timeframe "+timeFrameOK + " Door "+doorOK + " Temp "+temperatureOK + " ===> " + lightNeeded);
+        // logging.add("------");
         if(timeFrameOK && doorOK && temperatureOK) {
             lightNeeded = true;
         }
-        
+
         lightConfig.lightNeeded = lightNeeded;
         lightConfig.timeFrameOK = timeFrameOK;
         lightConfig.doorOK = doorOK;
         lightConfig.temperatureOK = temperatureOK;
         status.minimumLightMins = lightConfig.minimumLightMins;
+
+        // Reason for light being on
+        if(temperatureOK && lightConfig.heatBelowC === null) {
+            status.lightOn = true;
+        }
+        if(temperatureOK && lightConfig.heatBelowC !== null) {
+            status.heatingOn = true;
+        }
     });
 
     if(lightNeeded) {
@@ -182,6 +212,8 @@ const checkLight = (newTemperature = null) => {
     }
     else {
         logging.add("Light Check. Parameters not met. Lights off.")
+        status.lightOn = false;
+        status.heatingOn = false;
     }
 
     setHeating(lightNeeded);
@@ -192,6 +224,7 @@ const sendEventStatus = () => {
 }
 
 exports.setEnableHeating = setEnableHeating;
+exports.setEnableLight = setEnableLight;
 exports.configure = configure;
 
 exports.status = {

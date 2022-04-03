@@ -451,6 +451,14 @@ app.get('/heating/disable', function (req, res) {
   heating.setEnableHeating(false);
   res.send({'message':'Turning Heating off'});
 });
+app.get('/light/enable', function (req, res) {
+  heating.setEnableLight(true);
+  res.send({'message':'Turning Light on'});
+});
+app.get('/light/disable', function (req, res) {
+  heating.setEnableLight(false);
+  res.send({'message':'Turning Light off'});
+});
 
 app.get('/events', events.sse.init);
 

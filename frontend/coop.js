@@ -205,6 +205,25 @@ angular.module('todoApp', ['angularMoment'])
       });
     }
 
+    $scope.schalteBeleuchtung = (anAus) => {
+      if(anAus) {
+        reqUrl = coopUrl + 'light/enable';
+      }
+      else {
+        reqUrl = coopUrl + 'light/disable';
+      }
+
+      $http({
+        method: 'GET',
+        url: reqUrl
+      }).then(function successCallback(response) {
+        $scope.getStatus();
+      }, function errorCallback(response) {
+        $scope.getStatus();
+        alert("Fehler beim Licht schalten: "+ response);
+      });
+    }
+
     $scope.getLichtStatus = (anAus) => {
       reqUrl = coopUrl + 'shelly/update';
 
@@ -244,6 +263,10 @@ angular.module('todoApp', ['angularMoment'])
       $scope.$apply();
     });
     es.addEventListener('heating', function (event) {
+      $scope.coopStatus.heating.status = JSON.parse(event.data);
+      $scope.$apply();
+    });
+    es.addEventListener('light', function (event) {
       $scope.coopStatus.heating.status = JSON.parse(event.data);
       $scope.$apply();
     });
