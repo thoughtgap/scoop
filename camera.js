@@ -8,15 +8,19 @@ var camera = {
     image: null,
     time: null,
     intervalSec: 30,
-    maxAgeSec: 10,
-    timeNextImage: null,
+    earliestTimeNextPhoto: null,
+    takeUntil: null,
     busy: false,
     lastRequest: null,
+    queue: false,
+    telegramQueue: false,
     ir: {
       on: null,
       time: null,
       image: null,
-      queued: false
+      queued: false,
+      lastRequest: null,
+      newQueued: false,
     },
     statistics: {
       avg: null,
@@ -47,12 +51,10 @@ const cam = new Raspistill(cameraConfig.raspistill);
 
 configure = (intervalSec, maxAgeSec, autoTakeMin) => {
     camera.intervalSec = intervalSec;
-    camera.maxAgeSec = maxAgeSec;
     camera.autoTakeMin = autoTakeMin
     
     logging.add("Camera Configure: "+
         "  intervalSec " + camera.intervalSec + 
-        "  maxAgeSec " + camera.maxAgeSec + 
         "  autoTakeMin " + camera.autoTakeMin
     );
 
@@ -60,20 +62,50 @@ configure = (intervalSec, maxAgeSec, autoTakeMin) => {
     getIRStatus();
 };
 
+queue = () => {
+  camera.queued = true;
+}
+
 queueNightvision = () => {
   camera.ir.queued = true;
-  return this.takePhoto(true)
 }
 
 queueTelegram = () => {
   camera.telegramQueue = true;
   camera.ir.queued = true;
-  return this.takePhoto(true)
 }
 
-takePhoto = (nightVision = false, sendTelegramMessage = false) => {
+photoIntervalSec = () => {
+  return (camera.statistics.avg ? camera.statistics.avg : camera.intervalSec) + 0.1;
+}
+
+checkCamera = () => {
+
+  // Check for recent requests for photos
+  if(camera.lastRequest > camera.time || moment() < camera.takeUntil) {
+    camera.queued = true;
+  }
+  
+  logging.add("Queues Photo "+ (camera.queued ? 'Y' : 'N') + "   Nightvision "+ (camera.ir.queued ? 'Y' : 'N') + "  Telegram    "+ (camera.telegramQueue ? 'Y' : 'N'),"debug");
+
+  if(camera.queued || camera.ir.queued || camera.telegramQueue) {
+    photoStatus = this.takePhoto();
+    if(photoStatus) {
+      camera.queued = false;
+      camera.ir.queued = false;
+      camera.telegramQueue= false;
+    }
+  }
+  setTimeout(function checkQueueNextTime() {
+    checkCamera();
+  }, 1 * 1000);
+}
+checkCamera();
+
+
+takePhoto = (nightVision = false) => {
+
     let now = new Date();
-    let max = camera.timeNextImage;
 
     // Check if nightvision pic is queued
     if(camera.ir.queued) {
@@ -81,15 +113,18 @@ takePhoto = (nightVision = false, sendTelegramMessage = false) => {
     }
 
     // Is it really necessary to take another picture?
-    if(now <= max && !nightVision) {
-        logging.add("Not taking picture. Picture still good.","debug");
-        return "picture still good";
+    if(now <= camera.earliestTimeNextPhoto /* && !nightVision*/) {
+      logging.add("Not taking picture. Picture still good.","debug");
+      return false;
+      // TODO return "picture still good";
     }
     else if(camera.busy) {
-      logging.add("Not taking picture. Camera busy."),"debug";
-      return "camera busy";
+      logging.add("Not taking picture. Camera busy.","debug");
+      return false;
+      // TODO return "camera busy";
     }
     else {
+      logging.add("Taking picture","debug");
 
       if(nightVision && !gpioRelais.setNightVision(true)) {
         logging.add(`Could not turn on Night Vision`, 'warn');
@@ -100,23 +135,22 @@ takePhoto = (nightVision = false, sendTelegramMessage = false) => {
       let takingPicture = moment();
 
       cam.takePhoto().then((photo) => {
+        // Photo was successfully taken
 
-        newPicTime = new Date();
+        let newPicTime = moment();
+        
+        camera.busy = false;
 
+        // Save new picture and timestamp
         camera.image = photo;
         camera.time = newPicTime;
-
+        camera.queued = false;
         if(nightVision) {
           camera.ir.image = photo;
           camera.ir.time = newPicTime;
           camera.ir.queued = false;
         }
-        else {
-          camera.timeNextImage = new Date();
-          camera.timeNextImage.setSeconds(camera.timeNextImage.getSeconds() + camera.maxAgeSec);
-        }
-        camera.busy = false;
-
+        
         // Turn off Infrared LEDs again
         if(nightVision && !gpioRelais.setNightVision(false)) {
           logging.add("Error when turning night vision off","warn");
@@ -129,7 +163,14 @@ takePhoto = (nightVision = false, sendTelegramMessage = false) => {
         }
         
         // Push new Webcam pictures via sse
-        events.send('newWebcamPic'+(nightVision ? 'IR' : ''),newPicTime);
+        events.send('newWebcamPic',newPicTime);
+        if(nightVision) {
+          events.send('newWebcamPicIR',newPicTime);
+        }
+
+        // Earliest next image
+        camera.earliestTimeNextPhoto = new Date();
+        camera.earliestTimeNextPhoto.setSeconds(camera.earliestTimeNextPhoto.getSeconds() + photoIntervalSec());
 
         // Statistics about camera duration
         let tookPicture = moment();
@@ -142,7 +183,10 @@ takePhoto = (nightVision = false, sendTelegramMessage = false) => {
         camera.statistics.min = Math.round(Math.min.apply(null, cameraTimeStats) / 100) / 10;
         camera.statistics.max = Math.round(Math.max.apply(null, cameraTimeStats) / 100) / 10;
         camera.statistics.pics = cameraTimeStats.length;
-        logging.add(`Camera Statistics: ${camera.statistics.pics} pics, Avg ${camera.statistics.avg}s, Min ${camera.statistics.min}s, Max ${camera.statistics.max}s`);
+        // Only periodically log the camera statistics
+        if(camera.statistics.pics == 1 || camera.statistics.pics%100 == 0) {
+          logging.add(`Camera Statistics: ${camera.statistics.pics} pics, Avg ${camera.statistics.avg}s, Min ${camera.statistics.min}s, Max ${camera.statistics.max}s`);
+        }
 
         // Purge Camera Statistics if the record gets too large
         cameraStatisticsTreshold = 5000;
@@ -151,33 +195,22 @@ takePhoto = (nightVision = false, sendTelegramMessage = false) => {
           cameraTimeStats = [];
         }
 
-        
-        // Schedule taking the next picture (only non-night vision)
-        if(camera.lastRequest /*&& !nightVision*/) {
-
-          let takeUntil = camera.lastRequest.clone();
-          takeUntil.add(camera.autoTakeMin,'minutes');
-    
-          if(moment() < takeUntil) {
-            let nextPictureInSec = (camera.statistics.avg ? camera.statistics.avg : camera.intervalSec) + 0.1;
-            logging.add(nextPictureInSec * 1000);
-
-            logging.add(`Taking another picture in ${nextPictureInSec}s. Last Request ${camera.lastRequest.format('HH:mm:ss')}, taking for ${camera.autoTakeMin}min until ${takeUntil.format('HH:mm:ss')}`);
-            setTimeout(function nextPicPls() {
-              takePhoto();
-            }, nextPictureInSec * 1000);
-          }
+        // Plan pictures to be taken until x mins after the last manual request        
+        if(camera.lastRequest && !nightVision) {
+          camera.takeUntil = camera.lastRequest.clone();
+          camera.takeUntil.add(camera.autoTakeMin,'minutes');
         }
       });
       return true;
     }
 }
-takePhoto();
 
 getSvg = (which = "normal") => {
     /* An SVG Container with image timestamp.
         Will not trigger picture-taking on its own, as it's wrapping
         the camera.image picture from the /cam endpoint
+
+        which can be nightvision.
     */
     let cameraObj = null;
     let picUrl = null;
@@ -227,13 +260,8 @@ getSvg = (which = "normal") => {
         html += '<text x="50" y="300" fill="black" font-size="100px">kein '+ (which == 'nightvision' ? 'Nachtf' : 'F') +'oto</text>';
         html += '<text x="90" y="400" fill="black" font-size="100px">für dich</text>';
         if(getTemperature()) {
-          html += '<text x="90" y="430" fill="black" font-size="20px">aber im Stall sind es '+ Math.round(getTemperature() * 10) /10 +' °C</text>';
-
-          
+          html += '<text x="90" y="430" fill="black" font-size="20px">aber im Stall sind es '+ Math.round(getTemperature() * 10) /10 +' °C</text>'; 
         }
-        
-
-
       }
             
     html += `
@@ -245,9 +273,9 @@ getSvg = (which = "normal") => {
 }
 
 getJpg = () => {
-    camera.lastRequest = new moment();
-    takePhoto();
-    return camera.image;
+  camera.lastRequest = new moment();
+  //takePhoto();
+  return camera.image;
 }
 
 getIRJpg = () => {

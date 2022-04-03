@@ -379,7 +379,7 @@ app.get('/reset', function (req, res) {
     res.send("modified test.json");
 });
 app.get('/cam/new', function (req, res) {
-  let takeIt = camera.takePhoto(false);
+  let takeIt = camera.queue();
   if(takeIt == true) {
     res.send({success:true,message:"foto in auftrag gegeben. abholen unter /cam"});
   }
