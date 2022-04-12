@@ -93,7 +93,6 @@ checkCamera = () => {
     if(photoStatus) {
       camera.queued = false;
       camera.ir.queued = false;
-      camera.telegramQueue= false;
     }
   }
   setTimeout(function checkQueueNextTime() {
