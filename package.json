@@ -28,7 +28,7 @@
     "moment": "^2.29.2",
     "node-dht-sensor": "^0.4.3",
     "node-raspistill": "^1.0.3",
-    "nodemon": "^2.0.15",
+    "nodemon": "^2.0.20",
     "onoff": "^6.0.2",
     "pi-temperature": "^2.1.0",
     "pngjs": "^5.0.0",
