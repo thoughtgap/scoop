@@ -396,6 +396,15 @@ app.get('/cam/:timestamp?', function (req, res) {
     res.send({message:"geht nicht"});
   }
 });
+app.get('/cam.jpg', function (req, res) {
+  if(camera.getJpg()) {
+    res.contentType('image/jpeg');
+    res.send(camera.getJpg());
+  }
+  else {
+    res.send({message:"geht nicht"});
+  }
+});
 app.get('/nightvision/new', function (req, res) {
   let takeIt = camera.queueNightvision();
   if(takeIt == true) {
