@@ -25,7 +25,7 @@
     "express": "^4.17.1",
     "express-sse": "^0.5.3",
     "heapdump": "^0.3.15",
-    "moment": "^2.29.2",
+    "moment": "^2.29.4",
     "node-dht-sensor": "^0.4.3",
     "node-raspistill": "^1.0.3",
     "nodemon": "^2.0.20",
