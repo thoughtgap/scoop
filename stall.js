@@ -263,7 +263,8 @@ app.use(function(req, res, next) {
 
 
 app.get('/', function (req, res) {
-  res.send('Hello 🐔!');
+  //res.send('Hello 🐔!');
+  res.redirect('/frontend/index.html');
 });
 
 // Hacky frontend delivery
@@ -396,15 +397,6 @@ app.get('/cam/:timestamp?', function (req, res) {
     res.send({message:"geht nicht"});
   }
 });
-app.get('/cam.jpg', function (req, res) {
-  if(camera.getJpg()) {
-    res.contentType('image/jpeg');
-    res.send(camera.getJpg());
-  }
-  else {
-    res.send({message:"geht nicht"});
-  }
-});
 app.get('/nightvision/new', function (req, res) {
   let takeIt = camera.queueNightvision();
   if(takeIt == true) {
@@ -430,6 +422,19 @@ app.get('/nightvisionsvg/:timestamp?', function (req, res) {
 app.get('/camsvg/:timestamp?', function (req, res) {
     res.contentType('image/svg+xml');
     res.send(camera.getSvg());
+});
+app.get('/cam.svg', function (req, res) {
+    res.contentType('image/svg+xml');
+    res.send(camera.getSvg());
+});
+app.get('/cam.jpg', function (req, res) {
+  if(camera.getJpg()) {
+    res.contentType('image/jpeg');
+    res.send(camera.getJpg());
+  }
+  else {
+    res.send({message:"geht nicht"});
+  }
 });
 app.get('/heapdump', function (req, res) {
   // For debugging memory leaks
