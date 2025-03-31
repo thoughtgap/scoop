@@ -42,6 +42,8 @@ var status = {
 }
 
 configure = (lightConfigObj) => {
+    //logging.add('Received config:'+ JSON.stringify(lightConfigObj, null, 2));
+
     //config.minimumLightMins = lightConfigObj.minimumLightMins; // int or null
     status.enableHeating = lightConfigObj.enabled; // true or false
     status.enableLight   = lightConfigObj.enabled;
@@ -85,12 +87,17 @@ const checkTimeFrame = (from,to) => {
     const minutesFrom = parseInt(from.h)*60 + parseInt(from.m);
     const minutesTo   = parseInt(to.h)*60 + parseInt(to.m);
 
+    //logging.add("Check Timeframe: from:("+from.toString()+") to:("+to.toString()+") minutesNow:("+minutesNow+") result:("+(minutesFrom <= minutesNow  && minutesTo >= minutesNow )+")");
+
     return (minutesFrom <= minutesNow  && minutesTo >= minutesNow );
 }
 
 const needToHeatLonger = () => {
-    if(status.turnedOn !== null && status.minimumLightMins !== null) {        
-        status.heatUntil = status.turnedOn.add(status.minimumLightMins,'minutes');
+    //logging.add("needToHeatLonger() turnedOn:("+ ( status.turnedOn ? status.turnedOn.toString() : "null" ) +") status.minimumLightMins:("+status.minimumLightMins+")");
+    if(status.turnedOn !== null && status.minimumLightMins !== null) {
+        status.heatUntil = status.turnedOn.clone();
+        status.heatUntil = status.heatUntil.add(status.minimumLightMins,'minutes');
+        //logging.add("needToHeatLonger() Heating minimum "+status.minimumLightMins+" mins, until"+status.heatUntil.toString());
     }
     
     return (
@@ -101,6 +108,10 @@ const needToHeatLonger = () => {
 }
 
 const setEnableHeating = (boolYesNo) => {
+// Add debug logging
+    //logging.add(`setEnableHeating called with value: ${boolYesNo}`);
+    //logging.add(`Previous status: ${JSON.stringify(status, null, 2)}`);
+
     // For GUI Usage
     if(boolYesNo === true) {
         status.enableHeating = true;
@@ -113,6 +124,10 @@ const setEnableHeating = (boolYesNo) => {
 }
 
 const setEnableLight = (boolYesNo) => {
+    // Add debug logging
+    //logging.add(`setEnableLight called with value: ${boolYesNo}`);
+    //logging.add(`Previous status: ${JSON.stringify(status, null, 2)}`);
+
     // For GUI Usage
     if(boolYesNo === true) {
         status.enableLight = true;
@@ -125,9 +140,12 @@ const setEnableLight = (boolYesNo) => {
 }
 
 const setHeating = (boolOnOff) => {
+    //logging.add("setHeating() "+boolOnOff)
     
     // Only do something if status is differing
+    //logging.add("setHeating() boolOnOff:("+boolOnOff+") status.heating:("+status.heating+") status.turnedOn:("+ ( status.turnedOn ? status.turnedOn.toString() : "null" )+")");
     if(status.heating != boolOnOff) {
+        
         status.heating = boolOnOff;
         status.lastChange = moment();
 
@@ -157,7 +175,8 @@ const checkLight = (newTemperature = null) => {
 
     let lightNeeded =  false;
 
-    config.conditions.forEach(lightConfig => {
+    //config.conditions.forEach(lightConfig => {
+    for (let lightConfig of config.conditions) {
 
         // Check Timeframe
         const timeFrameOK = checkTimeFrame(lightConfig.from,lightConfig.to);
@@ -179,44 +198,49 @@ const checkLight = (newTemperature = null) => {
         );
 
         // Determine whether light or heating
-        if(lightConfig.heatBelowC === null && status.enableLight)
-
-        // logging.add("Heating/Light Params: Timeframe "+timeFrameOK + " Door "+doorOK + " Temp "+temperatureOK + " ===> " + lightNeeded);
-        // logging.add("------");
-        if(timeFrameOK && doorOK && temperatureOK) {
-            lightNeeded = true;
-        }
-
+        //if(lightConfig.heatBelowC === null && status.enableLight)
+        lightNeeded = (timeFrameOK && doorOK && temperatureOK);
         lightConfig.lightNeeded = lightNeeded;
         lightConfig.timeFrameOK = timeFrameOK;
         lightConfig.doorOK = doorOK;
         lightConfig.temperatureOK = temperatureOK;
-        status.minimumLightMins = lightConfig.minimumLightMins;
+
+        // logging.add("Heating/Light Params: Timeframe "+timeFrameOK + " // Door "+doorOK + " // Temp "+temperatureOK + " ===> " + lightNeeded);
+        // logging.add("------");
 
         // Reason for light being on
         if(temperatureOK && lightConfig.heatBelowC === null) {
             status.lightOn = true;
+            status.heatingOn = false;
         }
         if(temperatureOK && lightConfig.heatBelowC !== null) {
             status.heatingOn = true;
         }
-    });
+
+        if(lightNeeded) {
+            status.minimumLightMins = lightConfig.minimumLightMins;
+            //logging.add("Light on. Skipping further light checks.","debug");
+            break; // No need to check consecutive light configurations
+        }
+    //});
+    }
 
     if(lightNeeded) {
         // Heated long enough?
-        logging.add("Light Check. Parameters met. Lights on.")
+        logging.add("Light Check. Parameters met. Lights on.","debug")
     }
     else if(needToHeatLonger()) {
         lightNeeded = true;
-        logging.add("Light Check. Not on long enough ("+config.minimumLightMins+"min) - Lights on.")
+        logging.add("Light Check. Not on long enough ("+config.minimumLightMins+"min) - Lights on.","debug")
     }
     else {
-        logging.add("Light Check. Parameters not met. Lights off.")
+        logging.add("Light Check. Parameters not met. Lights off.","debug")
         status.lightOn = false;
         status.heatingOn = false;
     }
 
     setHeating(lightNeeded);
+    needToHeatLonger(); // Write timestamp how long light needs to remain on
 }
 
 const sendEventStatus = () => {
