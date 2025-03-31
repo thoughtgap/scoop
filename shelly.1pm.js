@@ -23,16 +23,18 @@ const configure = (url, intervalSec) => {
     status.intervalSec = intervalSec;
 }
 
+config.url = 'http://192.168.XXX.XXX'; // TODO: Remove
+
 getShellyStatus = (noRepeat = false) => {
     if (!status.busy && config.url !== null) {
         logging.add("Shelly getShellyStatus() getting relay data");
         status.busy = true;
 
-        request(config.url+'/rpc/Switch.GetStatus?id=0', {json: true}, (error, res, body) => {
+        request(config.url+'/status', {json: true}, (error, res, body) => {
             status.busy = false;
         
             if (!error && res.statusCode == 200) {
-                setShellyRelayStatus(body.output,'getShellyStatus()');
+                setShellyRelayStatus(body.relays[0].ison,'getShellyStatus()');
             };
 
             if(status.intervalSec && !noRepeat) {
@@ -59,21 +61,19 @@ const shellyRequestOptions = {
     retryDelay: 5000, // (default) wait for 5s before trying again
 }
 
-const turnShellyRelay = (onOff, retryCount = null) => {
-
+const turnShellyRelay = (onOff,retryCount = null) => {
     if(retryCount > 900) { 
         // Try max 30mins 
         logging.add("Shelly turnShellyRelay() - retried too often, not trying anymore");
         return false;
     }
     else if (config.url !== null && (onOff == 'on' || onOff == 'off')) {
-        //logging.add(`Shelly turnShellyRelay(${onOff})`);
+        logging.add(`Shelly turnShellyRelay(${onOff})`);
 
-        const rpcCommand = onOff === 'on' ? 'true' : 'false';
-        request(config.url+'/rpc/Switch.Set?id=0&on='+rpcCommand, shellyRequestOptions, (error, res, body) => {
+        request(config.url+'/relay/0?turn='+onOff, shellyRequestOptions, (error, res, body) => {
         
             if (!error && res.statusCode == 200) {
-                setShellyRelayStatus(body.was_on,'turnShellyRelay()');
+                setShellyRelayStatus(onOffToBool(onOff),'turnShellyRelay()');
             };
 
             if (error) {
