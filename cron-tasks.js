@@ -4,6 +4,46 @@ var logging = require('./logging.js');
 var suncalcHelper = require('./suncalc.js');
 var klappenModul = require('./klappe.js');
 var heating = require('./heating.js');
+var camera = require('./camera.js');
+
+//const cronTelegrams = ["0 */30 7-8 * * *", "0 */30 17-19 * * *", "0 0-40 20 * * *"];
+//const cronTelegram = "0 */30 6-9 * * *";
+
+// Create Cron Patterns to send Telegram Pictures around Sunrise and Sunset
+const sunTimes = suncalcHelper.getSunTimes();
+const openTime = sunTimes.sunrise;
+const closeTime = sunTimes.sunset;
+
+//const cronTelegrams = ["0 */30 7-8 * * *", "0 */30 17-19 * * *", "0 0-40 20 * * *"];
+let cronTelegrams = [];
+
+// Morning: take pictures every 15min from 1h before sunrise to 2h after sunrise
+let sunriseHour = sunTimes.sunrise.clone().hour();
+let startHour = sunriseHour;
+let endHour = sunriseHour + 2;
+cronTelegrams.push(`0 */15 ${startHour}-${endHour} * * *`);
+
+// Evening: take pictures every 15 minutes from 1h before sunset til sunset hour
+let sunsetHour = sunTimes.sunset.clone().hour();
+startHour = sunsetHour - 1;
+endHour = sunsetHour;
+cronTelegrams.push(`0 */15 ${startHour}-${endHour} * * *`);
+
+// Evening: take pictures every minute between 30min before and 45min after sunset
+eveningStartTime = sunTimes.sunset.clone().subtract(30, 'minutes');
+eveningEndTime = sunTimes.sunset.clone().add(20, 'minutes');
+while (eveningStartTime.isBefore(eveningEndTime)) {
+    cronTelegrams.push(`${eveningStartTime.minutes()} ${eveningStartTime.hours()} * * *`);
+    eveningStartTime.add(5, 'minutes');
+}
+
+// TOOD Remove duplicate values of cronTelegrams
+cronTelegrams = cronTelegrams.filter((value, index) => {
+    return cronTelegrams.indexOf(value) === index;
+});
+
+console.log(cronTelegrams);
+
 
 const cronConfig = {
     "location": {
@@ -174,6 +214,14 @@ const setupCronjobs = () => {
             logging.add("Cronjob Setup failed: " + newJob.action + " " + newJob.time + " INVALID CRON PATTERN","warn");
         }
     });
+
+    // Create custom cronjob which sends a telegram picture every hour
+    cronTelegrams.forEach(cronTelegram => {
+        coopCronjobs.push(new CronJob(cronTelegram, function () {
+            logging.add("Cronjob Run - Ding dong Custom Telegram Cronjob fired!","info");
+            camera.queueTelegram();
+        }, null, true));
+    })
 
 };
 
