@@ -66,7 +66,7 @@ readBME280 = () => {
             status.busy = false;
             let now = moment();
             status.time = now;
-            logging.add(`BME280 temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`);
+            logging.add(`BME280 temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`,"debug");
             logging.thingspeakLog("field1="+status.values.temperature.toFixed(2)+"&field2="+status.values.pressure.toFixed(2)+"&field3="+status.values.humidity.toFixed(2));
 
             // Minutely history, preserved for one hour
@@ -220,3 +220,4 @@ readBME280 = () => {
 exports.configure = configure;
 exports.readSensor = readBME280;
 exports.status = status;
+
