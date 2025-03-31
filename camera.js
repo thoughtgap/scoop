@@ -72,7 +72,16 @@ queueNightvision = () => {
 
 queueTelegram = () => {
   camera.telegramQueue = true;
-  camera.ir.queued = true;
+  var isDark = (moment().hour() >= 18 || moment().hour() < 8);
+
+  if(isDark) {
+    logging.add("Telegram photo with IR","info");
+    camera.ir.queued = true;
+  }
+  else {
+    logging.add("Telegram photo without IR","info");
+		//camera.ir.queued = true;
+  }
 }
 
 photoIntervalSec = () => {
@@ -156,7 +165,7 @@ takePhoto = (nightVision = false) => {
         }
 
         // Send picture via Telegram
-        if(camera.telegramQueue && nightVision) {
+        if(camera.telegramQueue) {
           telegram.sendPhoto(photo);
           camera.telegramQueue = false;
         }
@@ -222,23 +231,24 @@ getSvg = (which = "normal") => {
       picUrl = '/cam/'+ moment(cameraObj.time).format() +'.jpg';
     }
 
-
-    var html = `<?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE html>
-    <html xmlns="http://www.w3.org/1999/xhtml">
-      <head>
-        <meta charset="UTF-8"/>
-        <title> </title>
-        <style type="text/css">
-          html, body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-          }
-        </style>
-      </head>
-      <body>
+    // var html = `
+    // <?xml version="1.0" encoding="UTF-8"?>
+    // <!DOCTYPE html>
+    // <html xmlns="http://www.w3.org/1999/xhtml">
+    //   <head>
+    //     <meta charset="UTF-8"/>
+    //     <title> </title>
+    //     <style type="text/css">
+    //       html, body {
+    //         height: 100%;
+    //         width: 100%;
+    //         margin: 0;
+    //         padding: 0;
+    //       }
+    //     </style>
+    //   </head>
+    //   <body>
+    var html = `
         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px"
                 preserveAspectRatio="xMidYMid meet"
                 width="100%"
@@ -265,9 +275,9 @@ getSvg = (which = "normal") => {
             
     html += `
           </g>
-        </svg>
-      </body>
-    </html>`;
+        </svg>`;
+    //  </body>
+    //</html>`;
     return html;
 }
 
@@ -296,3 +306,4 @@ exports.getIRJpg = getIRJpg;
 exports.queueNightvision = queueNightvision;
 exports.queueTelegram = queueTelegram;
 //exports.sse = sse;
+
