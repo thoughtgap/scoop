@@ -1,5 +1,6 @@
 var express = require('express');
 var app = express();
+const port = 54032;  // Use the assigned port
 const fs = require('fs');
 const { PerformanceObserver, performance } = require('perf_hooks');
 var moment = require('moment');
@@ -547,3 +548,8 @@ cronTasks.configure(
   config.hatchAutomation,
   config.light
 );
+
+// Start the web server
+app.listen(port, '0.0.0.0', () => {
+  logging.add(`Web server listening at http://0.0.0.0:${port}`);
+});
