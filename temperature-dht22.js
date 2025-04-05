@@ -1,6 +1,18 @@
 var logging = require('./logging.js');
 var moment = require('moment');
 
+var status = {
+    enabled: false,
+    busy: false,
+    values: {
+        temperature: null,
+        humidity: null
+    },
+    error: null,
+    time: null,
+    intervalSec: null
+}
+
 // Check if module is disabled in config
 let dhtSensor = null;
 try {
@@ -15,18 +27,6 @@ try {
 } catch (e) {
     logging.add("Could not load DHT22 sensor module: " + e.message, "warn");
     status.enabled = false;
-}
-
-var status = {
-    enabled: false,
-    busy: false,
-    values: {
-        temperature: null,
-        humidity: null
-    },
-    error: null,
-    time: null,
-    intervalSec: null
 }
 
 var config = {
