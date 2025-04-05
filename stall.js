@@ -126,7 +126,7 @@ klappenModul.configure(
   global.skipModules
 );
 
-if (klappenModul.status?.enabled) {
+if (klappenModul.status && klappenModul.status.enabled) {
   klappenModul.stoppeKlappe();
   logging.add("Hatch motor initialized");
 } else {
@@ -229,7 +229,7 @@ function sensorObenWert(value, err) {
     sensorStatus.sensorOben.error = null;
 
     // If the motor is moving up and the sensor is activated, stop the motor
-    if (value == 0 && klappenModul.status?.enabled) {
+    if (value == 0 && klappenModul.status && klappenModul.status.enabled) {
       klappenModul.stoppeKlappe();
     }
   }
@@ -252,7 +252,7 @@ function sensorUntenWert(value, err) {
     sensorStatus.sensorUnten.error = null;
 
     // If the motor is moving down and the sensor is activated, stop the motor
-    if (value == 0 && klappenModul.status?.enabled) {
+    if (value == 0 && klappenModul.status && klappenModul.status.enabled) {
       klappenModul.stoppeKlappe();
     }
   }

@@ -120,6 +120,10 @@ fahreRunter = () => {
 }
 
 setNightVision = (onoff) => {
+    if (motorConfig.skipModules.ir) {
+        logging.add("Skipping IR control due to skipModules.ir", "debug");
+        return true;
+    }
     if(onoff == true && motorIsOn()) {
         logging.add("gpio-relais.setNightVision(true) Motor is running, cannot turn on IR!","debug");
         return false;
@@ -127,7 +131,9 @@ setNightVision = (onoff) => {
     else if (onoff == true || onoff == false) {
         let newStatus = (onoff == true ? motorConfig.motorEin : motorConfig.motorAus);
         logging.add("gpio-relais.setNightVision(true) Turning Night Vision "+(onoff ? "on" : "off"),"debug");
-        gpioIR.writeSync(newStatus);
+        if (global.gpioIR) {
+            global.gpioIR.writeSync(newStatus);
+        }
         IRlogChange(onoff);
         return true;
     }
@@ -139,11 +145,19 @@ setNightVision = (onoff) => {
 
 motorIsOn = () => {
     // Returns if the motor is moving
-    return klappeHoch.readSync() == motorConfig.motorEin || klappeRunter.readSync() == motorConfig.motorEin;
+    if (motorConfig.skipModules.motor) {
+        return false;
+    }
+    return global.klappeHoch && global.klappeRunter && 
+           (global.klappeHoch.readSync() == motorConfig.motorEin || 
+            global.klappeRunter.readSync() == motorConfig.motorEin);
 }
 
 IRIsOn = () => {
-    let status = gpioIR.readSync() == motorConfig.motorEin;
+    if (motorConfig.skipModules.ir) {
+        return false;
+    }
+    let status = global.gpioIR && global.gpioIR.readSync() == motorConfig.motorEin;
     logging.add(`IR on:  ${status}`); 
     return status;
 }
