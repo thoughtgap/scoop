@@ -1,10 +1,18 @@
 var moment = require('moment');
 const request = require('request');
 const SimpleNodeLogger = require('simple-node-logger');
+const fs = require('fs');
+const path = require('path');
+
+// Create logs directory if it doesn't exist
+const logsDir = './logs';
+if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir);
+}
 
 // Logging to files
 const fileLogConfig = {
-    logDirectory: './logs/',
+    logDirectory: logsDir,
     errorEventName: 'error',
     fileNamePattern: 'log-<DATE>.log',
     dateFormat: 'YYYY-MM-DD'
@@ -28,11 +36,12 @@ const setLogLevel = (logLevel) => {
     consoleLog.setLevel(logLevel);
 }
 
-const validLogLevel = (logLevel, fallback) => {
-    if(!validLogLevels.includes(logLevel)) {
-        fileLog.log('warn','Invalid Log Level '+logLevel+ ' changed to '+fallback);
-        consoleLog.log('warn','Invalid Log Level '+logLevel+ ' changed to '+fallback);
-
+const validLogLevel = (logLevel, fallback = 'info') => {
+    if (!logLevel || !validLogLevels.includes(logLevel)) {
+        if (logLevel) {  // Only log if an invalid level was actually provided
+            fileLog.log('warn', 'Invalid Log Level "' + logLevel + '" changed to "' + fallback + '"');
+            consoleLog.log('warn', 'Invalid Log Level "' + logLevel + '" changed to "' + fallback + '"');
+        }
         return fallback;
     }
     return logLevel;
