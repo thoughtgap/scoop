@@ -52,8 +52,12 @@ const init = () => {
             return false;
         }
 
-        this.kalibriere(JSON.parse(data));
-        logging.add("Read klappenPosition.json --> "+data);
+        try {
+            this.kalibriere(JSON.parse(data));
+            logging.add("Read klappenPosition.json --> "+data);
+        } catch(e) {
+            logging.add(e); // error in the above string (in this case, yes)!
+        }
     });
 
     // // Die manuelle Initialposition ist immer wichtiger als die automatische
@@ -314,3 +318,4 @@ exports.klappeFahren = klappeFahren;
 exports.korrigiereRunter = korrigiereRunter;
 exports.korrigiereHoch = korrigiereHoch;
 exports.stoppeKlappe = stoppeKlappe;
+

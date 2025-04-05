@@ -13,6 +13,14 @@ configure = (latitude, longitude) => {
     logging.add("Suncalc Location Configured "+suncalcConfig.lat+" "+suncalcConfig.lon);
 };
 
+const getSunTimes = () => {
+    const times = SunCalc.getTimes(new Date(), suncalcConfig.lat, suncalcConfig.lon);
+    return {
+        sunrise: moment(times.sunrise),
+        sunset: moment(times.sunset)
+    };
+}
+
 const suncalcStringToTime = (configString) => {
 
     newJob = {
@@ -71,3 +79,5 @@ const suncalcStringToTime = (configString) => {
 
 exports.configure = configure;
 exports.suncalcStringToTime = suncalcStringToTime;
+exports.getSunTimes = getSunTimes;
+

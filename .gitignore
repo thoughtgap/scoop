@@ -1,6 +1,8 @@
 .DS_Store
 sftp.json
 
+config.json
+
 # Logs
 logs
 *.log
