@@ -33,14 +33,14 @@ const configure = (
     ganzeFahrtSek,
     maxSekundenEinWeg,
     korrekturSekunden,
-    skipGpio
+    skipModules
 ) => {
     config.sensorObenMontiert = sensorObenMontiert;
     config.sensorUntenMontiert = sensorUntenMontiert;
     config.ganzeFahrtSek = ganzeFahrtSek;
     config.maxSekundenEinWeg = maxSekundenEinWeg;
     config.korrekturSekunden = korrekturSekunden;
-    config.skipGpio = skipGpio
+    config.skipModules = skipModules
 };
 
 const init = () => {
@@ -220,12 +220,12 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
 
             // Starte den Motor jetzt.
             if (richtung == "hoch") {
-                if (!config.skipGpio.motor) {
+                if (!config.skipModules.motor) {
                     gpioMotor.fahreHoch();
                 }
             }
             else if (richtung == "runter") {
-                if (!config.skipGpio.motor) {
+                if (!config.skipModules.motor) {
                     gpioMotor.fahreRunter();
                 }
             }

@@ -1,11 +1,15 @@
 {
-  "skipGpio": {
+  "skipModules": {
     "motor": true,
-    "dht22": false,
+    "dht22": true,
     "sensoren": true,
     "bme280": true,
     "cputemp": true,
-    "ir": true
+    "ir": true,
+    "camera": true,
+    "shelly": true,
+    "telegram": true,
+    "heating": true
   },
   "gpioPorts": {
     "in": {

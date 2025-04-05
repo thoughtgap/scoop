@@ -1,9 +1,9 @@
 var logging = require('./logging.js');
 var moment = require('moment');
-const request = require('request');
 var events = require('./events.js');
 
 let status = {
+    enabled: false,
     busy: false,
     time: null,
     relay: {
@@ -15,41 +15,84 @@ let status = {
 
 var config = {
     url: null,
+    skipModule: false
 }
 
 const configure = (url, intervalSec) => {
+    // Check if module should be skipped
+    if (global.skipModules && global.skipModules.shelly) {
+        config.skipModule = true;
+        status.enabled = false;
+        logging.add("Shelly module disabled in config");
+        return;
+    }
+
     logging.add(`Shelly configure ${url}`);
     config.url = url;
     status.intervalSec = intervalSec;
+
+    // Try to initialize the request module
+    try {
+        const request = require('request');
+        status.enabled = true;
+        logging.add("Shelly module initialized successfully");
+    } catch (e) {
+        config.skipModule = true;
+        status.enabled = false;
+        logging.add("Shelly module not available - request module missing", "warn");
+    }
 }
 
 getShellyStatus = (noRepeat = false) => {
+    if (config.skipModule || !status.enabled) {
+        // When disabled, simulate a response
+        status.time = moment();
+        status.relay.ison = false; // Default to off in mock mode
+        events.send('shellyRelayIsOn', false);
+        
+        // Schedule next check if interval is set
+        if(status.intervalSec && !noRepeat) {
+            setTimeout(function erneutLesen() {
+                getShellyStatus();
+            }, status.intervalSec * 1000);
+        }
+        return;
+    }
+
     if (!status.busy && config.url !== null) {
         logging.add("Shelly getShellyStatus() getting relay data");
         status.busy = true;
 
-        request(config.url+'/rpc/Switch.GetStatus?id=0', {json: true}, (error, res, body) => {
+        try {
+            const request = require('request');
+            request(config.url+'/rpc/Switch.GetStatus?id=0', {json: true}, (error, res, body) => {
+                status.busy = false;
+            
+                if (!error && res.statusCode == 200) {
+                    setShellyRelayStatus(body.output, 'getShellyStatus()');
+                };
+
+                if(status.intervalSec && !noRepeat) {
+                    logging.add("Shelly next value in "+status.intervalSec, 'debug');
+                    setTimeout(function erneutLesen() {
+                        getShellyStatus();
+                    }, status.intervalSec * 1000);
+                }
+
+                if (error) {
+                    logging.add(error, 'warn');
+                    return false;
+                };
+            });
+        } catch (e) {
+            logging.add("Error requiring request module: " + e, 'warn');
             status.busy = false;
-        
-            if (!error && res.statusCode == 200) {
-                setShellyRelayStatus(body.output,'getShellyStatus()');
-            };
-
-            if(status.intervalSec && !noRepeat) {
-                logging.add("Shelly next value in "+status.intervalSec,'debug');
-                setTimeout(function erneutLesen() {
-                    getShellyStatus();
-                }, status.intervalSec * 1000);
-            }
-
-            if (error) {
-                logging.add(error,'warn');
-                return false;
-            };
-        });
+            config.skipModule = true;
+            status.enabled = false;
+        }
     }
     else {
-        logging.add("Shelly getShellyStatus() - busy (skip)");
+        logging.add("Shelly getShellyStatus() - busy or not enabled (skip)");
     }
 }
 
@@ -60,6 +103,13 @@ const shellyRequestOptions = {
 }
 
 const turnShellyRelay = (onOff, retryCount = null) => {
+    if (config.skipModule || !status.enabled) {
+        // When disabled, just update the mock status
+        const newState = onOff === 'on';
+        setShellyRelayStatus(newState, 'turnShellyRelay(mock)');
+        logging.add(`Shelly mock relay turned ${onOff}`, "debug");
+        return true;
+    }
 
     if(retryCount > 900) { 
         // Try max 30mins 
@@ -67,33 +117,40 @@ const turnShellyRelay = (onOff, retryCount = null) => {
         return false;
     }
     else if (config.url !== null && (onOff == 'on' || onOff == 'off')) {
-        //logging.add(`Shelly turnShellyRelay(${onOff})`);
+        try {
+            const request = require('request');
+            const rpcCommand = onOff === 'on' ? 'true' : 'false';
+            request(config.url+'/rpc/Switch.Set?id=0&on='+rpcCommand, shellyRequestOptions, (error, res, body) => {
+            
+                if (!error && res.statusCode == 200) {
+                    setShellyRelayStatus(body.was_on, 'turnShellyRelay()');
+                };
 
-        const rpcCommand = onOff === 'on' ? 'true' : 'false';
-        request(config.url+'/rpc/Switch.Set?id=0&on='+rpcCommand, shellyRequestOptions, (error, res, body) => {
-        
-            if (!error && res.statusCode == 200) {
-                setShellyRelayStatus(body.was_on,'turnShellyRelay()');
-            };
+                if (error) {
+                    logging.add(error, 'warn');
 
-            if (error) {
-                logging.add(error,'warn');
-
-                // Try again if failed
-                if(retryCount === null) {
-                    retryCount = 0;
-                }
-                logging.add("Shelly turnShellyRelay() - failed - try again in 2s");
-                setTimeout(() => {
-                    turnShellyRelay(onOff, (retryCount + 1));
-                },2000);
-                
-                return false;
-            };
-        });
+                    // Try again if failed
+                    if(retryCount === null) {
+                        retryCount = 0;
+                    }
+                    logging.add("Shelly turnShellyRelay() - failed - try again in 2s");
+                    setTimeout(() => {
+                        turnShellyRelay(onOff, (retryCount + 1));
+                    }, 2000);
+                    
+                    return false;
+                };
+            });
+        } catch (e) {
+            logging.add("Error requiring request module: " + e, 'warn');
+            config.skipModule = true;
+            status.enabled = false;
+            return false;
+        }
     }
     else {
         logging.add("Shelly turnShellyRelay() - invalid config or command (skip)");
+        return false;
     }
 }
 
@@ -101,7 +158,7 @@ const turnShellyRelay = (onOff, retryCount = null) => {
 setShellyRelayStatusOnOff = (onOff) => {
     if(onOff == 'on' || onOff == 'off') {
         logging.add(`Shelly receiving setShellyRelayStatusOnOff(${onOff})`);
-        setShellyRelayStatus(onOffToBool(onOff),'setShellyRelayStatusOnOff');
+        setShellyRelayStatus(onOffToBool(onOff), 'setShellyRelayStatusOnOff');
     }
     else {
         logging.add(`Shelly receiving invalid setShellyRelayStatusOnOff(on,off)`);
@@ -126,11 +183,11 @@ const boolToOnOff = (bool) => {
     }
 }
 
-const setShellyRelayStatus = (onOffBool,source) => {
+const setShellyRelayStatus = (onOffBool, source) => {
     status.time = moment();
     status.relay.ison = onOffBool;
     status.source = source;
-    events.send('shellyRelayIsOn',onOffBool);
+    events.send('shellyRelayIsOn', onOffBool);
 }
 
 exports.configure = configure;
