@@ -23,7 +23,7 @@ configure = (intervalSec) => {
     if (global.skipModules && global.skipModules.cputemp) {
         config.skipModule = true;
         status.enabled = false;
-        logging.add("CPU temperature module disabled in config");
+        logging.add("Module disabled: CPU temperature");
         return;
     }
 

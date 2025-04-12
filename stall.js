@@ -201,7 +201,7 @@ async function initialize() {
       readSync: () => 1,
       watch: () => {}
     };
-    logging.add("Position sensors disabled - using mock sensors");
+    logging.add("Module disabled: position sensors", "debug");
   }
 
   function sensorPressed(position, value) {
@@ -289,7 +289,7 @@ async function initialize() {
       sensorStatus.sensorOben.time = now;
       sensorStatus.sensorOben.error = null;
 
-      logging.add("Using mock sensor values", "debug");
+      logging.add("Module disabled: position sensors", "debug");
     }
 
     // Schedule next reading if interval is set

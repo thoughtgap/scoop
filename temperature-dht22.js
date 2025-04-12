@@ -21,7 +21,7 @@ try {
         status.enabled = true;
         logging.add("DHT22 module enabled");
     } else {
-        logging.add("DHT22 module disabled in config");
+        logging.add("Module disabled: DHT22");
         status.enabled = false;
     }
 } catch (e) {

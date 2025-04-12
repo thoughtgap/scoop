@@ -23,7 +23,7 @@ const configure = (url, intervalSec) => {
     if (global.skipModules && global.skipModules.shelly) {
         config.skipModule = true;
         status.enabled = false;
-        logging.add("Shelly module disabled in config");
+        logging.add("Module disabled: Shelly");
         return;
     }
 

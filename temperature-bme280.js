@@ -60,7 +60,7 @@ configure = (port, intervalSec) => {
     if (global.skipModules && global.skipModules.bme280) {
         config.skipModule = true;
         status.enabled = false;
-        logging.add("BME280 module disabled in config");
+        logging.add("Module disabled: BME280");
         return;
     }
 
@@ -97,7 +97,7 @@ readBME280 = () => {
             pressure: basePressure + 5 * Math.sin(dayProgress) // Varies between 1008-1018 hPa
         };
 
-        logging.add(`BME280 mock values - temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`, "debug");
+        logging.add("Module disabled: BME280", "debug");
         
         // Schedule next reading if interval is set
         if (status.intervalSec) {
