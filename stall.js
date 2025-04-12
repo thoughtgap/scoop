@@ -1,6 +1,5 @@
 var express = require('express');
 var app = express();
-const port = 54032;  // Use the assigned port
 const fs = require('fs');
 const { PerformanceObserver, performance } = require('perf_hooks');
 var moment = require('moment');
@@ -9,6 +8,7 @@ var logging = require('./logging.js');
 var events = require('./events.js');
 
 let config = require('./config.json');
+const port = config.port || 3000;  // Use port from config or default to 3000
 const bootTimestamp = moment();
 logging.thingspeakSetAPIKey(config.thingspeakAPI);
 logging.setLogLevel(config.logLevel);
@@ -389,7 +389,7 @@ app.get('/status', function (req, res) {
     cpuTemp: global.cpuTemp ? global.cpuTemp.status : null,
     sensoren: global.sensorStatus,
     camera: {
-      image: 'http://192.168.31.21/cam',
+      image: `http://192.168.31.21:${config.port || 3000}/cam`,
       time: global.camera ? global.camera.data.time : null,
       intervalSec: global.camera ? global.camera.data.intervalSec : null,
       maxAgeSec: global.camera ? global.camera.data.maxAgeSec : null,

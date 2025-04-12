@@ -1,4 +1,5 @@
 {
+  "port": 3000,
   "skipModules": {
     "motor": true,
     "dht22": true,
