@@ -119,6 +119,11 @@ fahreRunter = async () => {
 }
 
 setNightVision = async (onoff) => {
+    if (motorConfig.skipGpio || motorConfig.skipGpioIR) {
+        logging.add("Skipping night vision control due to skipGpio/skipGpioIR", "debug");
+        return true;
+    }
+    
     if(onoff == true && await motorIsOn()) {
         logging.add("gpio-relais.setNightVision(true) Motor is running, cannot turn on IR!","debug");
         return false;
@@ -138,6 +143,9 @@ setNightVision = async (onoff) => {
 
 motorIsOn = async () => {
     // Returns if the motor is moving
+    if (motorConfig.skipGpio) {
+        return false;
+    }
     const hochState = await gpioControl.getPin(motorConfig.pinHoch);
     const runterState = await gpioControl.getPin(motorConfig.pinRunter);
     return (hochState === (motorConfig.motorEin ? 'high' : 'low')) || 
@@ -145,6 +153,9 @@ motorIsOn = async () => {
 }
 
 IRIsOn = async () => {
+    if (motorConfig.skipGpioIR) {
+        return false;
+    }
     const status = await gpioControl.getPin(motorConfig.pinIR) === (motorConfig.motorEin ? 'high' : 'low');
     logging.add(`IR on: ${status}`); 
     return status;

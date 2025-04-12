@@ -51,253 +51,264 @@ if (disabledModules.length > 0) {
 var suncalcHelper = require('./suncalc.js');
 suncalcHelper.configure(config.location.lat, config.location.lon);
 
-// 2. Initialize GPIO Relais (motor control)
-var gpioRelais = require('./gpio-relais.js');
-gpioRelais.configure(
-  config.gpioPorts.out.hoch,
-  config.gpioPorts.out.runter,
-  config.gpioPorts.out.ir,
-  config.motorAus,
-  config.motorEin,
-  global.skipModules
-);
+async function initialize() {
+  // 1. Initialize GPIO first as other modules depend on it
+  var gpioRelais = require('./gpio-relais.js');
+  await gpioRelais.configure( config.gpioPorts.out.hoch,
+                  config.gpioPorts.out.runter,
+                  config.gpioPorts.out.ir,
+                  config.motorAus,
+                  config.motorEin,
+                  global.skipModules.motor,
+                  global.skipModules.ir);
 
-// 3. Initialize Temperature Sensors
-// 3.1 BME280
-var bme280 = require('./temperature-bme280.js');
-bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
-if (bme280.status.enabled) {
-  bme280.readSensor();
-}
+  // 2. Initialize Camera module (depends on GPIO for night vision)
+  var camera = require('./camera.js');
+  camera.configure(
+    config.camera.intervalSec,
+    config.camera.maxAgeSec,
+    config.camera.autoTakeMin
+  );
 
-// Helper functions for temperature and humidity
-getTemperature = () => bme280.status.values.temperature;
-getHumidity = () => bme280.status.values.humidity;
-
-// 3.2 DHT22
-var dht22 = require('./temperature-dht22.js');
-dht22.configure(config.gpioPorts.out.dht22, config.intervals.dht22);
-if (dht22.status.enabled) {
-  dht22.readSensor();
-}
-
-// 3.3 CPU Temperature
-var cpuTemp = require('./temperature-cpu.js');
-cpuTemp.configure(config.intervals.cpu);
-if (cpuTemp.status.enabled) {
-  cpuTemp.readSensor();
-}
-
-// 4. Initialize Telegram notifications
-var telegram = require('./telegram.js');
-telegram.configure(
-  config.telegram.sendMessages,
-  config.telegram.token,
-  config.telegram.chatId
-);
-
-// 5. Initialize Camera module
-var camera = require('./camera.js');
-camera.configure(
-  config.camera.intervalSec,
-  config.camera.maxAgeSec,
-  config.camera.autoTakeMin
-);
-
-// 6. Initialize Shelly smart plug control
-var shelly = require('./shelly.js');
-shelly.configure(
-  config.shelly.url,
-  config.shelly.intervalSec
-);
-
-// 7. Initialize Heating control
-var heating = require('./heating.js');
-heating.configure(config.light);
-
-// 8. Initialize Klappe (hatch) module
-var klappenModul = require('./klappe.js');
-klappenModul.configure(
-  config.sensorObenMontiert,
-  config.sensorUntenMontiert,
-  config.ganzeFahrtSek,
-  config.maxSekundenEinWeg,
-  config.korrekturSekunden,
-  global.skipModules
-);
-
-if (klappenModul.status && klappenModul.status.enabled) {
-  klappenModul.stoppeKlappe();
-  logging.add("Hatch motor initialized");
-} else {
-  logging.add("Hatch motor disabled");
-}
-
-// 9. Initialize position sensors
-var sensorStatus = {
-  enabled: !global.skipModules.sensoren,
-  sensorOben: {
-    value: null,
-    text: null,
-    time: null,
-    error: null
-  },
-  sensorUnten: {
-    value: null,
-    text: null,
-    time: null,
-    error: null
-  },
-  intervalSec: config.intervals.sensoren
-};
-
-var sensorOben, sensorUnten;
-
-if (!global.skipModules.sensoren) {
-  try {
-    const { Gpio } = require('onoff');  // Import Gpio only if needed
-    sensorOben = new Gpio(config.gpioPorts.in.oben, 'in', 'both', {debounceTimeout: 10});
-    sensorUnten = new Gpio(config.gpioPorts.in.unten, 'in', 'both', {debounceTimeout: 10});
-
-    sensorOben.watch((err, value) => {
-      if (err) {
-        logging.add("Error in sensorOben watch: " + err, "error");
-        sensorStatus.sensorOben.error = err;
-        return;
-      }
-      sensorPressed("oben", value);
-    });
-    
-    sensorUnten.watch((err, value) => {
-      if (err) {
-        logging.add("Error in sensorUnten watch: " + err, "error");
-        sensorStatus.sensorUnten.error = err;
-        return;
-      }
-      sensorPressed("unten", value);
-    });
-
-    logging.add("Position sensors initialized successfully");
-  } catch (e) {
-    logging.add("Error initializing position sensors: " + e, "error");
-    sensorStatus.enabled = false;
-    global.skipModules.sensoren = true;
+  // 3. Initialize Temperature Sensors
+  if(!global.skipModules.bme280) {
+    logging.add("Initializing BME280 Temperature Sensor");
+    var bme280 = require('./temperature-bme280.js');
+    bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
+    logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`);
+    bme280.readSensor();
   }
-}
-
-if (!sensorStatus.enabled) {
-  // Mock sensor objects when disabled
-  sensorOben = {
-    read: (callback) => callback(null, 1),  // Not pressed
-    readSync: () => 1,
-    watch: () => {}
-  };
-  sensorUnten = {
-    read: (callback) => callback(null, 1),  // Not pressed
-    readSync: () => 1,
-    watch: () => {}
-  };
-  logging.add("Position sensors disabled - using mock sensors");
-}
-
-function sensorPressed(position, value) {
-  if (!sensorStatus.enabled) {
-    return; // Don't process sensor events when disabled
+  else {
+    logging.add("Skipping BME280 Temperature Sensor");
   }
 
-  logging.add("sensorPressed: " + position + " " + (value == 1 ? "released" : "pressed") + " (" + value + ")");
+  // Helper functions for temperature and humidity
+  getTemperature = () => bme280.status.values.temperature;
+  getHumidity = () => bme280.status.values.humidity;
 
-  if (position == "oben") {
-    sensorObenWert(value, null);
+  // Initialize DHT22
+  var dht22 = require('./temperature-dht22.js');
+  dht22.configure(config.gpioPorts.out.dht22, config.intervals.dht22);
+  if (dht22.status.enabled) {
+    dht22.readSensor();
+  }
+
+  // Initialize CPU Temperature
+  var cpuTemp = require('./temperature-cpu.js');
+  cpuTemp.configure(config.intervals.cpu);
+  if (cpuTemp.status.enabled) {
+    cpuTemp.readSensor();
+  }
+
+  // Initialize Telegram notifications
+  var telegram = require('./telegram.js');
+  telegram.configure(
+    config.telegram.sendMessages,
+    config.telegram.token,
+    config.telegram.chatId
+  );
+
+  // Initialize Shelly smart plug control
+  var shelly = require('./shelly.js');
+  shelly.configure(
+    config.shelly.url,
+    config.shelly.intervalSec
+  );
+
+  // Initialize Heating control
+  var heating = require('./heating.js');
+  heating.configure(config.light);
+
+  // Initialize Klappe (hatch) module
+  var klappenModul = require('./klappe.js');
+  klappenModul.configure(
+    config.sensorObenMontiert,
+    config.sensorUntenMontiert,
+    config.ganzeFahrtSek,
+    config.maxSekundenEinWeg,
+    config.korrekturSekunden,
+    global.skipModules
+  );
+
+  if (klappenModul.status && klappenModul.status.enabled) {
+    klappenModul.stoppeKlappe();
+    logging.add("Hatch motor initialized");
   } else {
-    sensorUntenWert(value, null);
-  }
-}
-
-function sensorObenWert(value, err) {
-  if (!sensorStatus.enabled) {
-    return; // Don't process sensor values when disabled
+    logging.add("Hatch motor disabled");
   }
 
-  if (err) {
-    sensorStatus.sensorOben.value = null;
-    sensorStatus.sensorOben.text = "error";
-    sensorStatus.sensorOben.error = err;
-  } else {
-    sensorStatus.sensorOben.value = value;
-    sensorStatus.sensorOben.text = (value == 1 ? "nicht " : "") + "betätigt";
-    sensorStatus.sensorOben.error = null;
+  // 9. Initialize position sensors
+  var sensorStatus = {
+    enabled: !global.skipModules.sensoren,
+    sensorOben: {
+      value: null,
+      text: null,
+      time: null,
+      error: null
+    },
+    sensorUnten: {
+      value: null,
+      text: null,
+      time: null,
+      error: null
+    },
+    intervalSec: config.intervals.sensoren
+  };
 
-    // If the motor is moving up and the sensor is activated, stop the motor
-    if (value == 0 && klappenModul.status && klappenModul.status.enabled) {
-      klappenModul.stoppeKlappe();
+  var sensorOben, sensorUnten;
+
+  if (!global.skipModules.sensoren) {
+    try {
+      const { Gpio } = require('onoff');  // Import Gpio only if needed
+      sensorOben = new Gpio(config.gpioPorts.in.oben, 'in', 'both', {debounceTimeout: 10});
+      sensorUnten = new Gpio(config.gpioPorts.in.unten, 'in', 'both', {debounceTimeout: 10});
+
+      sensorOben.watch((err, value) => {
+        if (err) {
+          logging.add("Error in sensorOben watch: " + err, "error");
+          sensorStatus.sensorOben.error = err;
+          return;
+        }
+        sensorPressed("oben", value);
+      });
+      
+      sensorUnten.watch((err, value) => {
+        if (err) {
+          logging.add("Error in sensorUnten watch: " + err, "error");
+          sensorStatus.sensorUnten.error = err;
+          return;
+        }
+        sensorPressed("unten", value);
+      });
+
+      logging.add("Position sensors initialized successfully");
+    } catch (e) {
+      logging.add("Error initializing position sensors: " + e, "error");
+      sensorStatus.enabled = false;
+      global.skipModules.sensoren = true;
     }
   }
-  sensorStatus.sensorOben.time = new Date();
-  logging.add("leseSensoren Oben " + value, "debug");
-}
 
-function sensorUntenWert(value, err) {
   if (!sensorStatus.enabled) {
-    return; // Don't process sensor values when disabled
+    // Mock sensor objects when disabled
+    sensorOben = {
+      read: (callback) => callback(null, 1),  // Not pressed
+      readSync: () => 1,
+      watch: () => {}
+    };
+    sensorUnten = {
+      read: (callback) => callback(null, 1),  // Not pressed
+      readSync: () => 1,
+      watch: () => {}
+    };
+    logging.add("Position sensors disabled - using mock sensors");
   }
 
-  if (err) {
-    sensorStatus.sensorUnten.value = null;
-    sensorStatus.sensorUnten.text = "error";
-    sensorStatus.sensorUnten.error = err;
-  } else {
-    sensorStatus.sensorUnten.value = value;
-    sensorStatus.sensorUnten.text = (value == 1 ? "nicht " : "") + "betätigt";
-    sensorStatus.sensorUnten.error = null;
+  function sensorPressed(position, value) {
+    if (!sensorStatus.enabled) {
+      return; // Don't process sensor events when disabled
+    }
 
-    // If the motor is moving down and the sensor is activated, stop the motor
-    if (value == 0 && klappenModul.status && klappenModul.status.enabled) {
-      klappenModul.stoppeKlappe();
+    logging.add("sensorPressed: " + position + " " + (value == 1 ? "released" : "pressed") + " (" + value + ")");
+
+    if (position == "oben") {
+      sensorObenWert(value, null);
+    } else {
+      sensorUntenWert(value, null);
     }
   }
-  sensorStatus.sensorUnten.time = new Date();
-  logging.add("leseSensoren Unten " + value, "debug");
-}
 
-function leseSensoren() {
-  if (sensorStatus.enabled) {
-    // Read real sensors
-    sensorOben.read((err, value) => {
-      sensorObenWert(value, err);
-    });
+  function sensorObenWert(value, err) {
+    if (!sensorStatus.enabled) {
+      return; // Don't process sensor values when disabled
+    }
 
-    sensorUnten.read((err, value) => {
-      sensorUntenWert(value, err);
-    });
-  } else {
-    // Update mock values
-    const now = new Date();
-    
-    // Mock values - top sensor not activated, bottom sensor activated
-    sensorStatus.sensorUnten.value = 0;  // Activated
-    sensorStatus.sensorUnten.text = "betätigt";
-    sensorStatus.sensorUnten.time = now;
-    sensorStatus.sensorUnten.error = null;
+    if (err) {
+      sensorStatus.sensorOben.value = null;
+      sensorStatus.sensorOben.text = "error";
+      sensorStatus.sensorOben.error = err;
+    } else {
+      sensorStatus.sensorOben.value = value;
+      sensorStatus.sensorOben.text = (value == 1 ? "nicht " : "") + "betätigt";
+      sensorStatus.sensorOben.error = null;
 
-    sensorStatus.sensorOben.value = 1;   // Not activated
-    sensorStatus.sensorOben.text = "nicht betätigt";
-    sensorStatus.sensorOben.time = now;
-    sensorStatus.sensorOben.error = null;
-
-    logging.add("Using mock sensor values", "debug");
+      // If the motor is moving up and the sensor is activated, stop the motor
+      if (value == 0 && klappenModul.status && klappenModul.status.enabled) {
+        klappenModul.stoppeKlappe();
+      }
+    }
+    sensorStatus.sensorOben.time = new Date();
+    logging.add("leseSensoren Oben " + value, "debug");
   }
 
-  // Schedule next reading if interval is set
-  if (sensorStatus.intervalSec) {
-    setTimeout(function erneutLesen() {
-      leseSensoren();
-    }, sensorStatus.intervalSec * 1000);
+  function sensorUntenWert(value, err) {
+    if (!sensorStatus.enabled) {
+      return; // Don't process sensor values when disabled
+    }
+
+    if (err) {
+      sensorStatus.sensorUnten.value = null;
+      sensorStatus.sensorUnten.text = "error";
+      sensorStatus.sensorUnten.error = err;
+    } else {
+      sensorStatus.sensorUnten.value = value;
+      sensorStatus.sensorUnten.text = (value == 1 ? "nicht " : "") + "betätigt";
+      sensorStatus.sensorUnten.error = null;
+
+      // If the motor is moving down and the sensor is activated, stop the motor
+      if (value == 0 && klappenModul.status && klappenModul.status.enabled) {
+        klappenModul.stoppeKlappe();
+      }
+    }
+    sensorStatus.sensorUnten.time = new Date();
+    logging.add("leseSensoren Unten " + value, "debug");
   }
+
+  function leseSensoren() {
+    if (sensorStatus.enabled) {
+      // Read real sensors
+      sensorOben.read((err, value) => {
+        sensorObenWert(value, err);
+      });
+
+      sensorUnten.read((err, value) => {
+        sensorUntenWert(value, err);
+      });
+    } else {
+      // Update mock values
+      const now = new Date();
+      
+      // Mock values - top sensor not activated, bottom sensor activated
+      sensorStatus.sensorUnten.value = 0;  // Activated
+      sensorStatus.sensorUnten.text = "betätigt";
+      sensorStatus.sensorUnten.time = now;
+      sensorStatus.sensorUnten.error = null;
+
+      sensorStatus.sensorOben.value = 1;   // Not activated
+      sensorStatus.sensorOben.text = "nicht betätigt";
+      sensorStatus.sensorOben.time = now;
+      sensorStatus.sensorOben.error = null;
+
+      logging.add("Using mock sensor values", "debug");
+    }
+
+    // Schedule next reading if interval is set
+    if (sensorStatus.intervalSec) {
+      setTimeout(function erneutLesen() {
+        leseSensoren();
+      }, sensorStatus.intervalSec * 1000);
+    }
+  }
+
+  // Start sensor reading loop
+  leseSensoren();
 }
 
-// Start sensor reading loop
-leseSensoren();
+// Start the initialization
+initialize().catch(err => {
+  logging.add("Error during initialization: " + err.message, 'error');
+  process.exit(1);
+});
 
 // Handle http requests
 app.use(function(req, res, next) {
