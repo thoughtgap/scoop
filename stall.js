@@ -154,6 +154,7 @@ async function initialize() {
     config.korrekturSekunden,
     global.skipModules
   );
+  global.klappenModul.init();
 
   if (global.klappenModul.status && global.klappenModul.status.enabled) {
     global.klappenModul.stoppeKlappe();
