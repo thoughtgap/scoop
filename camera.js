@@ -3,6 +3,7 @@ var moment = require('moment');
 var gpioRelais = require('./gpio-relais.js');
 var events = require('./events.js');
 var telegram = require('./telegram.js');
+const LibCameraWrapper = require('./modules/camera/libcamera-wrapper.js');
 
 var camera = {
   image: null,
@@ -31,13 +32,12 @@ var camera = {
 };
 
 var cameraConfig = {
-  raspistill: {
+  libcamera: {
     rotation: 180,
-    noFileSave: true,
-    encoding: 'jpg',
     width: 1296,
     height: 972,
-    quality: 20
+    quality: 20,
+    nopreview: true
   }
 }
 
@@ -46,64 +46,19 @@ var cameraTimeStats = [];
 const cameraTimeStatsSince = moment();
 
 // Camera Objects
-let Raspistill, cam;
+let cam;
 
 // Check if camera module is disabled in config
 if (global.skipModules && global.skipModules.camera) {
   logging.add("Camera module disabled in config - using mock camera");
-  Raspistill = class MockRaspiStill {
-    constructor() { }
-    takePhoto() {
-      // Return a 1x1 black pixel JPEG
-      return Promise.resolve(Buffer.from([
-        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
-        0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
-        0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09,
-        0x09, 0x08, 0x0a, 0x0c, 0x14, 0x0d, 0x0c, 0x0b, 0x0b, 0x0c, 0x19, 0x12,
-        0x13, 0x0f, 0x14, 0x1d, 0x1a, 0x1f, 0x1e, 0x1d, 0x1a, 0x1c, 0x1c, 0x20,
-        0x24, 0x2e, 0x27, 0x20, 0x22, 0x2c, 0x23, 0x1c, 0x1c, 0x28, 0x37, 0x29,
-        0x2c, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1f, 0x27, 0x39, 0x3d, 0x38, 0x32,
-        0x3c, 0x2e, 0x33, 0x34, 0x32, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x01,
-        0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xff, 0xc4, 0x00, 0x14, 0x00, 0x01,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x09, 0xff, 0xc4, 0x00, 0x14, 0x10, 0x01, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00,
-        0x7f, 0x00, 0xff, 0xd9
-      ]));
-    }
-  };
-  cam = new Raspistill();
 } else {
   try {
-    Raspistill = require('node-raspistill').Raspistill;
-    cam = new Raspistill(cameraConfig.raspistill);
+    logging.add("Camera: Initiating");
+    cam = new LibCameraWrapper(cameraConfig.libcamera);
+    logging.add("Camera: LibCameraWrapper initialized successfully");
   } catch (e) {
-    // Mock RaspiStill when module is not available
+    // Mock camera when module is not available
     logging.add("Camera hardware not available - using mock camera");
-    Raspistill = class MockRaspiStill {
-      constructor() { }
-      takePhoto() {
-        // Return a 1x1 black pixel JPEG
-        return Promise.resolve(Buffer.from([
-          0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
-          0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
-          0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09,
-          0x09, 0x08, 0x0a, 0x0c, 0x14, 0x0d, 0x0c, 0x0b, 0x0b, 0x0c, 0x19, 0x12,
-          0x13, 0x0f, 0x14, 0x1d, 0x1a, 0x1f, 0x1e, 0x1d, 0x1a, 0x1c, 0x1c, 0x20,
-          0x24, 0x2e, 0x27, 0x20, 0x22, 0x2c, 0x23, 0x1c, 0x1c, 0x28, 0x37, 0x29,
-          0x2c, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1f, 0x27, 0x39, 0x3d, 0x38, 0x32,
-          0x3c, 0x2e, 0x33, 0x34, 0x32, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x01,
-          0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xff, 0xc4, 0x00, 0x14, 0x00, 0x01,
-          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x09, 0xff, 0xc4, 0x00, 0x14, 0x10, 0x01, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00,
-          0x7f, 0x00, 0xff, 0xd9
-        ]));
-      }
-    };
-    cam = new Raspistill();
   }
 }
 
@@ -152,7 +107,7 @@ checkCamera = async () => {
     camera.queued = true;
   }
 
-  logging.add("Queues Photo " + (camera.queued ? 'Y' : 'N') + "   Nightvision " + (camera.ir.queued ? 'Y' : 'N') + "  Telegram    " + (camera.telegramQueue ? 'Y' : 'N'), "debug");
+  logging.add("Queued Photo " + (camera.queued ? 'Y' : 'N') + "   Nightvision " + (camera.ir.queued ? 'Y' : 'N') + "  Telegram    " + (camera.telegramQueue ? 'Y' : 'N'), "debug");
 
   if (camera.queued || camera.ir.queued || camera.telegramQueue) {
     photoStatus = await takePhoto();
@@ -161,6 +116,7 @@ checkCamera = async () => {
       camera.ir.queued = false;
     }
   }
+  // Schedule next camera check
   setTimeout(function checkQueueNextTime() {
     checkCamera();
   }, 1 * 1000);
@@ -178,15 +134,14 @@ takePhoto = async (nightVision = false) => {
   if (now <= camera.earliestTimeNextPhoto /* && !nightVision*/) {
     logging.add("Not taking picture. Picture still good.", "debug");
     return false;
-    // TODO return "picture still good";
   }
+  // Camera is already busy
   else if (camera.busy) {
     logging.add("Not taking picture. Camera busy.", "debug");
     return false;
-    // TODO return "camera busy";
   }
   else {
-    logging.add("Taking picture", "debug");
+    logging.add("takePhoto() Taking picture", "debug");
 
     if (nightVision && !(await gpioRelais.setNightVision(true))) {
       logging.add(`Could not turn on Night Vision`, 'warn');
@@ -196,9 +151,11 @@ takePhoto = async (nightVision = false) => {
     logging.add("Taking a" + (nightVision ? " night vision" : "") + " picture", "debug");
     let takingPicture = moment();
 
+    // Take a photo via the new libcamera-wrapper
+    const imageBuffer = await cam.takePhoto();
+
     cam.takePhoto().then(async (photo) => {
       // Photo was successfully taken
-
       let newPicTime = moment();
 
       camera.busy = false;
@@ -207,6 +164,7 @@ takePhoto = async (nightVision = false) => {
       camera.image = photo;
       camera.time = newPicTime;
       camera.queued = false;
+      
       if (nightVision) {
         camera.ir.image = photo;
         camera.ir.time = newPicTime;
@@ -285,23 +243,6 @@ getSvg = (which = "normal") => {
     picUrl = '/cam/' + moment(cameraObj.time).format() + '.jpg';
   }
 
-  // var html = `
-  // <?xml version="1.0" encoding="UTF-8"?>
-  // <!DOCTYPE html>
-  // <html xmlns="http://www.w3.org/1999/xhtml">
-  //   <head>
-  //     <meta charset="UTF-8"/>
-  //     <title> </title>
-  //     <style type="text/css">
-  //       html, body {
-  //         height: 100%;
-  //         width: 100%;
-  //         margin: 0;
-  //         padding: 0;
-  //       }
-  //     </style>
-  //   </head>
-  //   <body>
   var html = `
         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px"
                 preserveAspectRatio="xMidYMid meet"
@@ -330,14 +271,12 @@ getSvg = (which = "normal") => {
   html += `
           </g>
         </svg>`;
-  //  </body>
-  //</html>`;
   return html;
 }
 
 getJpg = () => {
   camera.lastRequest = new moment();
-  //takePhoto();
+  takePhoto();
   return camera.image;
 }
 
