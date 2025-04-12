@@ -2,6 +2,7 @@
 sftp.json
 
 config.json
+modules/camera/tmp/camera.jpg
 
 # Logs
 logs
