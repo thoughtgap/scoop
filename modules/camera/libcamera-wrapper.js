@@ -31,7 +31,8 @@ class LibCameraWrapper {
                     height: this.config.height,
                     quality: this.config.quality,
                     nopreview: this.config.nopreview,
-                    output: this.tempFile
+                    output: this.tempFile,
+                    rotation: 180
                 }
             });
             
