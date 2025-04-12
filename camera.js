@@ -146,8 +146,7 @@ photoIntervalSec = () => {
   return (camera.statistics.avg ? camera.statistics.avg : camera.intervalSec) + 0.1;
 }
 
-checkCamera = () => {
-
+checkCamera = async () => {
   // Check for recent requests for photos
   if(camera.lastRequest > camera.time || moment() < camera.takeUntil) {
     camera.queued = true;
@@ -156,7 +155,7 @@ checkCamera = () => {
   logging.add("Queues Photo "+ (camera.queued ? 'Y' : 'N') + "   Nightvision "+ (camera.ir.queued ? 'Y' : 'N') + "  Telegram    "+ (camera.telegramQueue ? 'Y' : 'N'),"debug");
 
   if(camera.queued || camera.ir.queued || camera.telegramQueue) {
-    photoStatus = this.takePhoto();
+    photoStatus = await takePhoto();
     if(photoStatus) {
       camera.queued = false;
       camera.ir.queued = false;
@@ -166,11 +165,8 @@ checkCamera = () => {
     checkCamera();
   }, 1 * 1000);
 }
-checkCamera();
 
-
-takePhoto = (nightVision = false) => {
-
+takePhoto = async (nightVision = false) => {
     let now = new Date();
 
     // Check if nightvision pic is queued
@@ -192,7 +188,7 @@ takePhoto = (nightVision = false) => {
     else {
       logging.add("Taking picture","debug");
 
-      if(nightVision && !gpioRelais.setNightVision(true)) {
+      if(nightVision && !(await gpioRelais.setNightVision(true))) {
         logging.add(`Could not turn on Night Vision`, 'warn');
       }
 
@@ -200,7 +196,7 @@ takePhoto = (nightVision = false) => {
       logging.add("Taking a"+ (nightVision ? " night vision" : "") +" picture","debug");
       let takingPicture = moment();
 
-      cam.takePhoto().then((photo) => {
+      cam.takePhoto().then(async (photo) => {
         // Photo was successfully taken
 
         let newPicTime = moment();
@@ -218,7 +214,7 @@ takePhoto = (nightVision = false) => {
         }
         
         // Turn off Infrared LEDs again
-        if(nightVision && !gpioRelais.setNightVision(false)) {
+        if(nightVision && !(await gpioRelais.setNightVision(false))) {
           logging.add("Error when turning night vision off","warn");
         }
 

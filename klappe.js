@@ -220,13 +220,13 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
 
             // Starte den Motor jetzt.
             if (richtung == "hoch") {
-                if (!config.skipModules.motor) {
-                    gpioMotor.fahreHoch();
+                if (!config.skipGpio.motor) {
+                    fahreHoch();
                 }
             }
             else if (richtung == "runter") {
-                if (!config.skipModules.motor) {
-                    gpioMotor.fahreRunter();
+                if (!config.skipGpio.motor) {
+                    fahreRunter();
                 }
             }
 
@@ -271,8 +271,16 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
     return response;
 };
 
-stoppeKlappe = () => {
-    gpioMotor.stoppeMotor();
+fahreHoch = async () => {
+    await gpioMotor.fahreHoch();
+}
+
+fahreRunter = async () => {
+    await gpioMotor.fahreRunter();
+}
+
+stoppeKlappe = async () => {
+    await gpioMotor.stoppeMotor();
     setKlappenStatus("angehalten",null);
 
     // Take a picture and send via Telegram
