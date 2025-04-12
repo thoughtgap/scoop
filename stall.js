@@ -51,6 +51,31 @@ if (disabledModules.length > 0) {
 var suncalcHelper = require('./suncalc.js');
 suncalcHelper.configure(config.location.lat, config.location.lon);
 
+// Make klappenModul globally available
+global.klappenModul = null;
+global.bme280 = null;
+global.cpuTemp = null;
+global.camera = null;
+global.shelly = null;
+global.cronTasks = null;
+global.heating = null;
+global.sensorStatus = {
+  enabled: false,
+  sensorOben: {
+    value: null,
+    text: null,
+    time: null,
+    error: null
+  },
+  sensorUnten: {
+    value: null,
+    text: null,
+    time: null,
+    error: null
+  },
+  intervalSec: null
+};
+
 async function initialize() {
   // 1. Initialize GPIO first as other modules depend on it
   var gpioRelais = require('./gpio-relais.js');
@@ -63,8 +88,8 @@ async function initialize() {
                   global.skipModules.ir);
 
   // 2. Initialize Camera module (depends on GPIO for night vision)
-  var camera = require('./camera.js');
-  camera.configure(
+  global.camera = require('./camera.js');
+  global.camera.configure(
     config.camera.intervalSec,
     config.camera.maxAgeSec,
     config.camera.autoTakeMin
@@ -73,18 +98,18 @@ async function initialize() {
   // 3. Initialize Temperature Sensors
   if(!global.skipModules.bme280) {
     logging.add("Initializing BME280 Temperature Sensor");
-    var bme280 = require('./temperature-bme280.js');
-    bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
+    global.bme280 = require('./temperature-bme280.js');
+    global.bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
     logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`);
-    bme280.readSensor();
+    global.bme280.readSensor();
   }
   else {
     logging.add("Skipping BME280 Temperature Sensor");
   }
 
   // Helper functions for temperature and humidity
-  getTemperature = () => bme280.status.values.temperature;
-  getHumidity = () => bme280.status.values.humidity;
+  getTemperature = () => global.bme280 ? global.bme280.status.values.temperature : null;
+  getHumidity = () => global.bme280 ? global.bme280.status.values.humidity : null;
 
   // Initialize DHT22
   var dht22 = require('./temperature-dht22.js');
@@ -94,10 +119,10 @@ async function initialize() {
   }
 
   // Initialize CPU Temperature
-  var cpuTemp = require('./temperature-cpu.js');
-  cpuTemp.configure(config.intervals.cpu);
-  if (cpuTemp.status.enabled) {
-    cpuTemp.readSensor();
+  global.cpuTemp = require('./temperature-cpu.js');
+  global.cpuTemp.configure(config.intervals.cpu);
+  if (global.cpuTemp.status.enabled) {
+    global.cpuTemp.readSensor();
   }
 
   // Initialize Telegram notifications
@@ -109,19 +134,19 @@ async function initialize() {
   );
 
   // Initialize Shelly smart plug control
-  var shelly = require('./shelly.js');
-  shelly.configure(
+  global.shelly = require('./shelly.js');
+  global.shelly.configure(
     config.shelly.url,
     config.shelly.intervalSec
   );
 
   // Initialize Heating control
-  var heating = require('./heating.js');
-  heating.configure(config.light);
+  global.heating = require('./heating.js');
+  global.heating.configure(config.light);
 
   // Initialize Klappe (hatch) module
-  var klappenModul = require('./klappe.js');
-  klappenModul.configure(
+  global.klappenModul = require('./klappe.js');
+  global.klappenModul.configure(
     config.sensorObenMontiert,
     config.sensorUntenMontiert,
     config.ganzeFahrtSek,
@@ -130,15 +155,15 @@ async function initialize() {
     global.skipModules
   );
 
-  if (klappenModul.status && klappenModul.status.enabled) {
-    klappenModul.stoppeKlappe();
+  if (global.klappenModul.status && global.klappenModul.status.enabled) {
+    global.klappenModul.stoppeKlappe();
     logging.add("Hatch motor initialized");
   } else {
     logging.add("Hatch motor disabled");
   }
 
   // 9. Initialize position sensors
-  var sensorStatus = {
+  global.sensorStatus = {
     enabled: !global.skipModules.sensoren,
     sensorOben: {
       value: null,
@@ -166,7 +191,7 @@ async function initialize() {
       sensorOben.watch((err, value) => {
         if (err) {
           logging.add("Error in sensorOben watch: " + err, "error");
-          sensorStatus.sensorOben.error = err;
+          global.sensorStatus.sensorOben.error = err;
           return;
         }
         sensorPressed("oben", value);
@@ -175,7 +200,7 @@ async function initialize() {
       sensorUnten.watch((err, value) => {
         if (err) {
           logging.add("Error in sensorUnten watch: " + err, "error");
-          sensorStatus.sensorUnten.error = err;
+          global.sensorStatus.sensorUnten.error = err;
           return;
         }
         sensorPressed("unten", value);
@@ -184,12 +209,12 @@ async function initialize() {
       logging.add("Position sensors initialized successfully");
     } catch (e) {
       logging.add("Error initializing position sensors: " + e, "error");
-      sensorStatus.enabled = false;
+      global.sensorStatus.enabled = false;
       global.skipModules.sensoren = true;
     }
   }
 
-  if (!sensorStatus.enabled) {
+  if (!global.sensorStatus.enabled) {
     // Mock sensor objects when disabled
     sensorOben = {
       read: (callback) => callback(null, 1),  // Not pressed
@@ -205,7 +230,7 @@ async function initialize() {
   }
 
   function sensorPressed(position, value) {
-    if (!sensorStatus.enabled) {
+    if (!global.sensorStatus.enabled) {
       return; // Don't process sensor events when disabled
     }
 
@@ -219,53 +244,53 @@ async function initialize() {
   }
 
   function sensorObenWert(value, err) {
-    if (!sensorStatus.enabled) {
+    if (!global.sensorStatus.enabled) {
       return; // Don't process sensor values when disabled
     }
 
     if (err) {
-      sensorStatus.sensorOben.value = null;
-      sensorStatus.sensorOben.text = "error";
-      sensorStatus.sensorOben.error = err;
+      global.sensorStatus.sensorOben.value = null;
+      global.sensorStatus.sensorOben.text = "error";
+      global.sensorStatus.sensorOben.error = err;
     } else {
-      sensorStatus.sensorOben.value = value;
-      sensorStatus.sensorOben.text = (value == 1 ? "nicht " : "") + "betätigt";
-      sensorStatus.sensorOben.error = null;
+      global.sensorStatus.sensorOben.value = value;
+      global.sensorStatus.sensorOben.text = (value == 1 ? "nicht " : "") + "betätigt";
+      global.sensorStatus.sensorOben.error = null;
 
       // If the motor is moving up and the sensor is activated, stop the motor
-      if (value == 0 && klappenModul.status && klappenModul.status.enabled) {
-        klappenModul.stoppeKlappe();
+      if (value == 0 && global.klappenModul.status && global.klappenModul.status.enabled) {
+        global.klappenModul.stoppeKlappe();
       }
     }
-    sensorStatus.sensorOben.time = new Date();
+    global.sensorStatus.sensorOben.time = new Date();
     logging.add("leseSensoren Oben " + value, "debug");
   }
 
   function sensorUntenWert(value, err) {
-    if (!sensorStatus.enabled) {
+    if (!global.sensorStatus.enabled) {
       return; // Don't process sensor values when disabled
     }
 
     if (err) {
-      sensorStatus.sensorUnten.value = null;
-      sensorStatus.sensorUnten.text = "error";
-      sensorStatus.sensorUnten.error = err;
+      global.sensorStatus.sensorUnten.value = null;
+      global.sensorStatus.sensorUnten.text = "error";
+      global.sensorStatus.sensorUnten.error = err;
     } else {
-      sensorStatus.sensorUnten.value = value;
-      sensorStatus.sensorUnten.text = (value == 1 ? "nicht " : "") + "betätigt";
-      sensorStatus.sensorUnten.error = null;
+      global.sensorStatus.sensorUnten.value = value;
+      global.sensorStatus.sensorUnten.text = (value == 1 ? "nicht " : "") + "betätigt";
+      global.sensorStatus.sensorUnten.error = null;
 
       // If the motor is moving down and the sensor is activated, stop the motor
-      if (value == 0 && klappenModul.status && klappenModul.status.enabled) {
-        klappenModul.stoppeKlappe();
+      if (value == 0 && global.klappenModul.status && global.klappenModul.status.enabled) {
+        global.klappenModul.stoppeKlappe();
       }
     }
-    sensorStatus.sensorUnten.time = new Date();
+    global.sensorStatus.sensorUnten.time = new Date();
     logging.add("leseSensoren Unten " + value, "debug");
   }
 
   function leseSensoren() {
-    if (sensorStatus.enabled) {
+    if (global.sensorStatus.enabled) {
       // Read real sensors
       sensorOben.read((err, value) => {
         sensorObenWert(value, err);
@@ -279,24 +304,24 @@ async function initialize() {
       const now = new Date();
       
       // Mock values - top sensor not activated, bottom sensor activated
-      sensorStatus.sensorUnten.value = 0;  // Activated
-      sensorStatus.sensorUnten.text = "betätigt";
-      sensorStatus.sensorUnten.time = now;
-      sensorStatus.sensorUnten.error = null;
+      global.sensorStatus.sensorUnten.value = 0;  // Activated
+      global.sensorStatus.sensorUnten.text = "betätigt";
+      global.sensorStatus.sensorUnten.time = now;
+      global.sensorStatus.sensorUnten.error = null;
 
-      sensorStatus.sensorOben.value = 1;   // Not activated
-      sensorStatus.sensorOben.text = "nicht betätigt";
-      sensorStatus.sensorOben.time = now;
-      sensorStatus.sensorOben.error = null;
+      global.sensorStatus.sensorOben.value = 1;   // Not activated
+      global.sensorStatus.sensorOben.text = "nicht betätigt";
+      global.sensorStatus.sensorOben.time = now;
+      global.sensorStatus.sensorOben.error = null;
 
       logging.add("Module disabled: position sensors", "debug");
     }
 
     // Schedule next reading if interval is set
-    if (sensorStatus.intervalSec) {
+    if (global.sensorStatus.intervalSec) {
       setTimeout(function erneutLesen() {
         leseSensoren();
-      }, sensorStatus.intervalSec * 1000);
+      }, global.sensorStatus.intervalSec * 1000);
     }
   }
 
@@ -348,36 +373,36 @@ app.get('/frontend/de.min.js', function (req, res) {
 
 app.get('/status', function (req, res) {
   res.send({
-    klappe: klappenModul.klappe,
-    initialisiert: klappenModul.initialisiert,
-    initialPosition: klappenModul.initialPosition,
-    initialPositionManuell: klappenModul.initialPositionManuell,
-    sensorObenMontiert: klappenModul.config.sensorObenMontiert,
-    sensorUntenMontiert: klappenModul.config.sensorUntenMontiert,
-    maxSekundenEinWeg: klappenModul.config.maxSekundenEinWeg,
-    korrekturSekunden: klappenModul.config.korrekturSekunden,
+    klappe: global.klappenModul ? global.klappenModul.klappe : null,
+    initialisiert: global.klappenModul ? global.klappenModul.initialisiert : false,
+    initialPosition: global.klappenModul ? global.klappenModul.initialPosition : null,
+    initialPositionManuell: global.klappenModul ? global.klappenModul.initialPositionManuell : null,
+    sensorObenMontiert: global.klappenModul ? global.klappenModul.config.sensorObenMontiert : false,
+    sensorUntenMontiert: global.klappenModul ? global.klappenModul.config.sensorUntenMontiert : false,
+    maxSekundenEinWeg: global.klappenModul ? global.klappenModul.config.maxSekundenEinWeg : null,
+    korrekturSekunden: global.klappenModul ? global.klappenModul.config.korrekturSekunden : null,
     skipModules: global.skipModules,
-    bme280: bme280.status,
-    bewegungSumme: klappenModul.bewegungSumme(),
-    cpuTemp: cpuTemp.status,
-    sensoren: sensorStatus,
+    bme280: global.bme280 ? global.bme280.status : null,
+    bewegungSumme: global.klappenModul ? global.klappenModul.bewegungSumme() : null,
+    cpuTemp: global.cpuTemp ? global.cpuTemp.status : null,
+    sensoren: global.sensorStatus,
     camera: {
       image: 'http://192.168.31.21/cam',
-      time: camera.data.time,
-      intervalSec: camera.data.intervalSec,
-      maxAgeSec: camera.data.maxAgeSec,
-      timeNextImage: camera.data.timeNextImage,
-      busy: camera.data.busy,
+      time: global.camera ? global.camera.data.time : null,
+      intervalSec: global.camera ? global.camera.data.intervalSec : null,
+      maxAgeSec: global.camera ? global.camera.data.maxAgeSec : null,
+      timeNextImage: global.camera ? global.camera.data.timeNextImage : null,
+      busy: global.camera ? global.camera.data.busy : null,
       ir: {
-        time: camera.data.ir.time,
-        lastRequest: camera.data.ir.lastRequest
+        time: global.camera ? global.camera.data.ir.time : null,
+        lastRequest: global.camera ? global.camera.data.ir.lastRequest : null
       },
-      statistics: camera.data.statistics
+      statistics: global.camera ? global.camera.data.statistics : null
     },
-    shelly: shelly.status,
-    cron: cronTasks.status,
+    shelly: global.shelly ? global.shelly.status : null,
+    cron: global.cronTasks ? global.cronTasks.status : null,
     booted: bootTimestamp,
-    heating: heating.status
+    heating: global.heating ? global.heating.status : null
   });
 });
 
@@ -388,22 +413,22 @@ app.get('/log', function (req, res) {
 });
 
 app.get('/korrigiere/hoch', function (req, res) {
-  action = klappenModul.korrigiereHoch();
+  action = global.klappenModul ? global.klappenModul.korrigiereHoch() : { success: false, message: "Module not initialized" };
   res.send(action);
 });
 
 app.get('/korrigiere/runter', function (req, res) {
-  action = klappenModul.korrigiereRunter();
+  action = global.klappenModul ? global.klappenModul.korrigiereRunter() : { success: false, message: "Module not initialized" };
   res.send(action);
 });
 
 app.get('/kalibriere/:obenUnten', function (req, res) {
-  action = klappenModul.kalibriere(req.params.obenUnten);
+  action = global.klappenModul ? global.klappenModul.kalibriere(req.params.obenUnten) : { success: false, message: "Module not initialized" };
   res.send(action);
 });
 
 app.get('/hoch', function (req, res) {
-  action = klappenModul.klappeFahren("hoch", ganzeFahrtSek);
+  action = global.klappenModul ? global.klappenModul.klappeFahren("hoch", ganzeFahrtSek) : { success: false, message: "Module not initialized" };
   if(action.success != true) {
     res.status(403);
   }
@@ -411,7 +436,7 @@ app.get('/hoch', function (req, res) {
 });
 
 app.get('/runter', function (req, res) {
-  action = klappenModul.klappeFahren("runter", ganzeFahrtSek);
+  action = global.klappenModul ? global.klappenModul.klappeFahren("runter", ganzeFahrtSek) : { success: false, message: "Module not initialized" };
   if(action.success != true) {
     res.status(403);
   }
@@ -419,7 +444,7 @@ app.get('/runter', function (req, res) {
 });
 
 app.get('/hoch/:wielange', function (req, res) {
-  action = klappenModul.klappeFahren("hoch", parseFloat(req.params.wielange));
+  action = global.klappenModul ? global.klappenModul.klappeFahren("hoch", parseFloat(req.params.wielange)) : { success: false, message: "Module not initialized" };
   if(action.success != true) {
     res.status(403);
   }
@@ -427,7 +452,7 @@ app.get('/hoch/:wielange', function (req, res) {
 });
 
 app.get('/runter/:wielange', function (req, res) {
-  action = klappenModul.klappeFahren("runter", parseFloat(req.params.wielange));
+  action = global.klappenModul ? global.klappenModul.klappeFahren("runter", parseFloat(req.params.wielange)) : { success: false, message: "Module not initialized" };
   if(action.success != true) {
     res.status(403);
   }
@@ -443,7 +468,7 @@ app.get('/reset', function (req, res) {
 });
 
 app.get('/cam/new', function (req, res) {
-  let takeIt = camera.queue();
+  let takeIt = global.camera.queue();
   if(takeIt == true) {
     res.send({success:true,message:"foto in auftrag gegeben. abholen unter /cam"});
   }
@@ -453,9 +478,9 @@ app.get('/cam/new', function (req, res) {
 });
 
 app.get('/cam/:timestamp?', function (req, res) {
-  if(camera.getJpg()) {
+  if(global.camera.getJpg()) {
     res.contentType('image/jpeg');
-    res.send(camera.getJpg());
+    res.send(global.camera.getJpg());
   }
   else {
     res.send({message:"geht nicht"});
@@ -463,7 +488,7 @@ app.get('/cam/:timestamp?', function (req, res) {
 });
 
 app.get('/nightvision/new', function (req, res) {
-  let takeIt = camera.queueNightvision();
+  let takeIt = global.camera.queueNightvision();
   if(takeIt == true) {
     res.send({success:true,message:"nacht-foto kommt sofort. abholen unter /nightvision"});
   }
@@ -473,9 +498,9 @@ app.get('/nightvision/new', function (req, res) {
 });
 
 app.get('/nightvision/:timestamp?', function (req, res) {
-  if(camera.getIRJpg()) {
+  if(global.camera.getIRJpg()) {
     res.contentType('image/jpeg');
-    res.send(camera.getIRJpg());
+    res.send(global.camera.getIRJpg());
   }
   else {
     res.send({message:"Kein IR Foto. Bitte per /nightvision/new eins aufnehmen."});
@@ -484,23 +509,23 @@ app.get('/nightvision/:timestamp?', function (req, res) {
 
 app.get('/nightvisionsvg/:timestamp?', function (req, res) {
   res.contentType('image/svg+xml');
-  res.send(camera.getSvg("nightvision"));
+  res.send(global.camera.getSvg("nightvision"));
 });
 
 app.get('/camsvg/:timestamp?', function (req, res) {
   res.contentType('image/svg+xml');
-  res.send(camera.getSvg());
+  res.send(global.camera.getSvg());
 });
 
 app.get('/cam.svg', function (req, res) {
   res.contentType('image/svg+xml');
-  res.send(camera.getSvg());
+  res.send(global.camera.getSvg());
 });
 
 app.get('/cam.jpg', function (req, res) {
-  if(camera.getJpg()) {
+  if(global.camera.getJpg()) {
     res.contentType('image/jpeg');
-    res.send(camera.getJpg());
+    res.send(global.camera.getJpg());
   }
   else {
     res.send({message:"geht nicht"});
@@ -518,43 +543,43 @@ app.get('/heapdump', function (req, res) {
 });
 
 app.get('/shelly/inform/:onoff', function (req, res) {
-  shelly.setShellyRelayStatusOnOff(req.params.onoff);
+  global.shelly.setShellyRelayStatusOnOff(req.params.onoff);
   res.send({'message':'Thanks for sending Shelly Status'});
 });
 
 app.get('/shelly/turn/:onoff', function (req, res) {
-  shelly.turnShellyRelay(req.params.onoff);
+  global.shelly.turnShellyRelay(req.params.onoff);
   res.send({'message':'Turning Shelly on/off'});
 });
 
 app.get('/shelly/update', function (req, res) {
-  shelly.getShellyStatus(true);
+  global.shelly.getShellyStatus(true);
   res.send({'message':'Updating Shelly Status'});
 });
 
 app.get('/heating/enable', function (req, res) {
-  heating.setEnableHeating(true);
+  global.heating.setEnableHeating(true);
   res.send({'message':'Turning Heating on'});
 });
 
 app.get('/heating/disable', function (req, res) {
-  heating.setEnableHeating(false);
+  global.heating.setEnableHeating(false);
   res.send({'message':'Turning Heating off'});
 });
 
 app.get('/light/enable', function (req, res) {
-  heating.setEnableLight(true);
+  global.heating.setEnableLight(true);
   res.send({'message':'Turning Light on'});
 });
 
 app.get('/light/disable', function (req, res) {
-  heating.setEnableLight(false);
+  global.heating.setEnableLight(false);
   res.send({'message':'Turning Light off'});
 });
 
 // Initialize cron tasks
-var cronTasks = require('./cron-tasks.js');
-cronTasks.configure(
+global.cronTasks = require('./cron-tasks.js');
+global.cronTasks.configure(
   config.location,
   config.hatchAutomation,
   config.light
