@@ -1,6 +1,7 @@
 var logging = require('./logging.js');
 const { isDuration } = require('moment');
 const performance = require('perf_hooks').performance;
+const gpioControl = require('./modules/gpio-control.js');
 
 var motorConfig = {
     configured: false,
@@ -11,10 +12,7 @@ var motorConfig = {
     pinIR: null,
     motorAus: null,
     motorEin: null,
-    skipModules: {
-        motor: false,
-        ir: false
-    }
+    skipGpio: false
 }
 
 var nightVisionStatus = {
@@ -22,18 +20,15 @@ var nightVisionStatus = {
     time: null
 }
 
-configure = (pinHoch, pinRunter, pinIR, motorAus, motorEin, skipModules) => {
+configure = async (pinHoch, pinRunter, pinIR, motorAus, motorEin, skipGpio, skipGpioIR) => {
     motorConfig.configured = true;
-    motorConfig.pinHoch = pinHoch;
     motorConfig.pinHoch = pinHoch;
     motorConfig.pinRunter = pinRunter;
     motorConfig.pinIR = pinIR;
     motorConfig.motorAus = motorAus;
     motorConfig.motorEin = motorEin;
-    motorConfig.skipModules = {
-        motor: skipModules.motor || false,
-        ir: skipModules.ir || false
-    };
+    motorConfig.skipGpio = skipGpio;
+    motorConfig.skipGpioIR = skipGpioIR;
 
     logging.add("Motor Configure: " +
         "  configured " + motorConfig.configured +
@@ -42,98 +37,96 @@ configure = (pinHoch, pinRunter, pinIR, motorAus, motorEin, skipModules) => {
         ", pinIR " + motorConfig.pinIR +
         ", motorAus " + motorConfig.motorAus +
         ", motorEin " + motorConfig.motorEin +
-        ", skipMotor " + motorConfig.skipModules.motor + 
-        ", skipIR " + motorConfig.skipModules.ir
+        ", skipGpio " + motorConfig.skipGpio + 
+        ", skipGpioIR " + motorConfig.skipGpioIR
     );
 
-    init();
+    await init();
 };
 
-init = () => {    
-    if(!motorConfig.skipModules.motor || !motorConfig.skipModules.ir) {
-        global.Gpio = require('onoff').Gpio;
+init = async () => {    
+    if (motorConfig.skipGpio && motorConfig.skipGpioIR) {
+        logging.add("Skipping all GPIO init due to skipGpio and skipGpioIR");
+        return;
     }
 
-    if (motorConfig.skipModules.motor) {
-        logging.add("Skipping real gpioMotor init due to skipModules.motor");
-    }
-    else {
-        global.klappeHoch = new Gpio(motorConfig.pinHoch, 'high');
-        global.klappeRunter = new Gpio(motorConfig.pinRunter, 'high');
-        motorConfig.gpioInit = true;
-        logging.add("motorGpio initialized");
-    }
+    try {
+        await gpioControl.configure(motorConfig.skipGpio && motorConfig.skipGpioIR);
+        
+        if (!motorConfig.skipGpio) {
+            // Configure motor pins as outputs
+            await gpioControl.setPin(motorConfig.pinHoch, motorConfig.motorAus ? 'high' : 'low');
+            await gpioControl.setPin(motorConfig.pinRunter, motorConfig.motorAus ? 'high' : 'low');
+            motorConfig.gpioInit = true;
+            logging.add("motorGpio initialized");
+        }
 
-    if (motorConfig.skipModules.ir) {
-        logging.add("Skipping real gpioIR init due to skipModules.ir");
-    }
-    else {
-        global.gpioIR = new Gpio(motorConfig.pinIR, 'high');
-        motorConfig.gpioIRInit = true;
-        logging.add("gpioIR initialized");
+        if (!motorConfig.skipGpioIR) {
+            // Configure IR pin as output
+            await gpioControl.setPin(motorConfig.pinIR, motorConfig.motorAus ? 'high' : 'low');
+            motorConfig.gpioIRInit = true;
+            logging.add("gpioIR initialized");
+        }
+    } catch (error) {
+        logging.add("Error initializing GPIO: " + error.message, 'error');
+        throw error;
     }
 };
 
-stoppeMotor = () => {
+stoppeMotor = async () => {
     logging.add("Stoppe Motor");
-    if (motorConfig.skipModules.motor) {
-        logging.add("Skipping real gpioMotor init due to skipModules.motor");
+    if (motorConfig.skipGpio) {
+        logging.add("Skipping real gpioMotor init due to skipGpio");
     }
     else if (!motorConfig.gpioInit) {
         logging.add("Cannot stop motor, Gpio not initialized");
     }
     else {
-        klappeHoch.writeSync(motorConfig.motorAus);
-        klappeRunter.writeSync(motorConfig.motorAus);
+        await gpioControl.setPin(motorConfig.pinHoch, motorConfig.motorAus ? 'high' : 'low');
+        await gpioControl.setPin(motorConfig.pinRunter, motorConfig.motorAus ? 'high' : 'low');
     }
 }
 
-fahreHoch = () => {
+fahreHoch = async () => {
     logging.add("Fahre hoch");
-    if (motorConfig.skipModules.motor === true) {
-        logging.add("Skipping real gpioMotor init due to skipModules.motor");
+    if (motorConfig.skipGpio === true) {
+        logging.add("Skipping real gpioMotor init due to skipGpio");
     }
     else if (motorConfig.gpioInit === false) {
         logging.add("Cannot go up, Gpio not initialized");
     }
     else {
-        setNightVision(false);
-        klappeHoch.writeSync(motorConfig.motorEin);
-        klappeRunter.writeSync(motorConfig.motorAus);
+        await setNightVision(false);
+        await gpioControl.setPin(motorConfig.pinHoch, motorConfig.motorEin ? 'high' : 'low');
+        await gpioControl.setPin(motorConfig.pinRunter, motorConfig.motorAus ? 'high' : 'low');
     }
 }
 
-fahreRunter = () => {
+fahreRunter = async () => {
     logging.add("Fahre runter");
-    logging.add(`skipMotor: ${motorConfig.skipModules.motor}  gpioInit: ${motorConfig.gpioInit}`);
-    if (motorConfig.skipModules.motor === true) {
-        logging.add("Skipping real gpioMotor init due to skipModules.motor");
+    logging.add(`skipGpio: ${motorConfig.skipGpio}  gpioInit: ${motorConfig.gpioInit}`);
+    if (motorConfig.skipGpio === true) {
+        logging.add("Skipping real gpioMotor init due to skipGpio");
     }
     else if (motorConfig.gpioInit === false) {
         logging.add("Cannot go down, Gpio not initialized");
     }
     else {
-        setNightVision(false);
-        klappeHoch.writeSync(motorConfig.motorAus);
-        klappeRunter.writeSync(motorConfig.motorEin);
+        await setNightVision(false);
+        await gpioControl.setPin(motorConfig.pinHoch, motorConfig.motorAus ? 'high' : 'low');
+        await gpioControl.setPin(motorConfig.pinRunter, motorConfig.motorEin ? 'high' : 'low');
     }
 }
 
-setNightVision = (onoff) => {
-    if (motorConfig.skipModules.ir) {
-        logging.add("Skipping IR control due to skipModules.ir", "debug");
-        return true;
-    }
-    if(onoff == true && motorIsOn()) {
+setNightVision = async (onoff) => {
+    if(onoff == true && await motorIsOn()) {
         logging.add("gpio-relais.setNightVision(true) Motor is running, cannot turn on IR!","debug");
         return false;
     }
     else if (onoff == true || onoff == false) {
         let newStatus = (onoff == true ? motorConfig.motorEin : motorConfig.motorAus);
         logging.add("gpio-relais.setNightVision(true) Turning Night Vision "+(onoff ? "on" : "off"),"debug");
-        if (global.gpioIR) {
-            global.gpioIR.writeSync(newStatus);
-        }
+        await gpioControl.setPin(motorConfig.pinIR, newStatus ? 'high' : 'low');
         IRlogChange(onoff);
         return true;
     }
@@ -143,22 +136,17 @@ setNightVision = (onoff) => {
     }
 }
 
-motorIsOn = () => {
+motorIsOn = async () => {
     // Returns if the motor is moving
-    if (motorConfig.skipModules.motor) {
-        return false;
-    }
-    return global.klappeHoch && global.klappeRunter && 
-           (global.klappeHoch.readSync() == motorConfig.motorEin || 
-            global.klappeRunter.readSync() == motorConfig.motorEin);
+    const hochState = await gpioControl.getPin(motorConfig.pinHoch);
+    const runterState = await gpioControl.getPin(motorConfig.pinRunter);
+    return (hochState === (motorConfig.motorEin ? 'high' : 'low')) || 
+           (runterState === (motorConfig.motorEin ? 'high' : 'low'));
 }
 
-IRIsOn = () => {
-    if (motorConfig.skipModules.ir) {
-        return false;
-    }
-    let status = global.gpioIR && global.gpioIR.readSync() == motorConfig.motorEin;
-    logging.add(`IR on:  ${status}`); 
+IRIsOn = async () => {
+    const status = await gpioControl.getPin(motorConfig.pinIR) === (motorConfig.motorEin ? 'high' : 'low');
+    logging.add(`IR on: ${status}`); 
     return status;
 }
 
