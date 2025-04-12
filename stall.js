@@ -315,7 +315,7 @@ async function initialize() {
       global.sensorStatus.sensorOben.time = now;
       global.sensorStatus.sensorOben.error = null;
 
-      logging.add("Module disabled: position sensors", "debug");
+      logging.add("Module disabled: position sensors leseSensoren()", "debug");
     }
 
     // Schedule next reading if interval is set
@@ -327,7 +327,8 @@ async function initialize() {
   }
 
   // Start sensor reading loop
-  leseSensoren();
+  //leseSensoren();
+  // TODO Get this into a separate module
 }
 
 // Start the initialization
