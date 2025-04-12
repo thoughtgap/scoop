@@ -220,12 +220,12 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
 
             // Starte den Motor jetzt.
             if (richtung == "hoch") {
-                if (!config.skipGpio.motor) {
+                if (!config.skipModules.motor) {
                     fahreHoch();
                 }
             }
             else if (richtung == "runter") {
-                if (!config.skipGpio.motor) {
+                if (!config.skipModules.motor) {
                     fahreRunter();
                 }
             }
