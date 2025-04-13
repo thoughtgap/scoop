@@ -41,6 +41,6 @@
   "optionalDependencies": {
     "bme280": "^2.1.0",
     "node-dht-sensor": "^0.4.3",
-    "pi-temperature": "^2.1.0"
+    "pi-temperature": "^3.0.0"
   }
 }
