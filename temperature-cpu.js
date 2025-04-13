@@ -35,29 +35,19 @@ configure = (intervalSec) => {
     } catch (e) {
         config.skipModule = true;
         status.enabled = false;
-        logging.add("CPU temperature module not available - using mock sensor", "warn");
+        logging.add("CPU temperature module not available", "warn");
     }
 }
 
 readCPUTemp = () => {
     if (config.skipModule) {
-        // When disabled, return mock values that slowly change over time
-        const now = moment();
-        status.time = now;
-        
-        // Generate mock values that vary slightly over time
-        const baseTemp = 45; // Base CPU temperature in Celsius
-        
-        // Add some variation based on time of day (24h cycle)
-        const hourOfDay = now.hours() + now.minutes() / 60;
-        const dayProgress = (hourOfDay / 24) * 2 * Math.PI;
-        
-        // CPU temp varies between 40-50°C in a daily cycle
-        status.values.temperature = baseTemp + 5 * Math.sin(dayProgress);
+        // When disabled, return fixed values
+        status.time = moment();
+        status.values.temperature = 0;
         status.error = null;
 
-        logging.add(`CPU mock temperature ${status.values.temperature.toFixed(2)}°C`, "debug");
-        logging.thingspeakLog("field4="+status.values.temperature);
+        logging.add("CPU temperature module disabled - returning 0°C", "debug");
+        logging.thingspeakLog("field4=0");
         
         // Schedule next reading if interval is set
         if (status.intervalSec) {
@@ -79,6 +69,8 @@ readCPUTemp = () => {
                 if (err) {
                     logging.add("CPU Temperature Error "+err, 'warn');
                     status.error = err;
+                    status.values.temperature = 0;
+                    logging.thingspeakLog("field4=0");
                 }
                 else {
                     status.error = null;
@@ -98,6 +90,8 @@ readCPUTemp = () => {
             status.busy = false;
             config.skipModule = true;
             status.enabled = false;
+            status.values.temperature = 0;
+            logging.thingspeakLog("field4=0");
             
             // Retry after interval
             if(status.intervalSec) {
