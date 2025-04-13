@@ -3,6 +3,7 @@ var app = express();
 const fs = require('fs');
 const { PerformanceObserver, performance } = require('perf_hooks');
 var moment = require('moment');
+const compression = require('compression');
 
 var logging = require('./logging.js');
 var events = require('./events.js');
@@ -75,6 +76,8 @@ global.sensorStatus = {
   },
   intervalSec: null
 };
+
+app.use(compression());
 
 async function initialize() {
   // 1. Initialize GPIO first as other modules depend on it
@@ -578,6 +581,8 @@ app.get('/light/disable', function (req, res) {
   global.heating.setEnableLight(false);
   res.send({'message':'Turning Light off'});
 });
+
+app.get('/events', events.sse.init);
 
 // Initialize cron tasks
 global.cronTasks = require('./cron-tasks.js');

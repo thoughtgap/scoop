@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/thoughtgap/schicke-chicks#readme",
   "dependencies": {
+    "compression": "^1.8.0",
     "cron": "^1.8.2",
     "express": "^4.21.0",
     "express-sse": "^0.5.3",
