@@ -194,7 +194,6 @@ To tell the hatch if it is up or down
 
 
 ### Administrative
-* `/heapdump` will send a heapdump
 * `/reset` will restart the application if it's run via nodemon (will modify a test.js file). Don't judge, please!
 
 

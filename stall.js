@@ -419,15 +419,6 @@ app.get('/cam.jpg', function (req, res) {
     res.send({message:"geht nicht"});
   }
 });
-app.get('/heapdump', function (req, res) {
-  // For debugging memory leaks
-  logging.add(`Extracting Heap dump`);
-  const heapdump = require("heapdump");
-  heapdump.writeSnapshot((err, filename) => {
-    logging.add(`Heap dump written to ${filename}`);
-    res.send(`Heap dump written to ${filename}`);
-  });
-});
 app.get('/shelly/inform/:onoff', function (req, res) {
   shelly.setShellyRelayStatusOnOff(req.params.onoff);
   res.send({'message':'Thanks for sending Shelly Status'});

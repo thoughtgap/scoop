@@ -26,7 +26,6 @@
     "express": "^4.21.0",
     "express-sse": "^0.5.3",
     "form-data": "^4.0.0",
-    "heapdump": "^0.3.15",
     "libcamera": "^1.0.7",
     "moment": "^2.29.4",
     "node-dht-sensor": "^0.4.3",
