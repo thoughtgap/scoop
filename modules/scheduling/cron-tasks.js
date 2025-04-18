@@ -42,7 +42,7 @@ cronTelegrams = cronTelegrams.filter((value, index) => {
     return cronTelegrams.indexOf(value) === index;
 });
 
-console.log(cronTelegrams);
+logging.add("Schedules Crons for Telegram Pictures: " + cronTelegrams.toString());
 
 
 const cronConfig = {

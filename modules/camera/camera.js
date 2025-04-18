@@ -74,7 +74,9 @@ queueNightvision = () => {
 // TODO Implement check if it's dark
 queueTelegram = () => {
   camera.telegramQueue = true;
-  var isDark = (moment().hour() >= 18 || moment().hour() < 8);
+  
+  // Use suncalc helper to determine if it's dark outside
+  const isDark = suncalcHelper.isDark();
 
   if(isDark) {
     logging.add("Telegram photo with IR","info");
@@ -82,35 +84,7 @@ queueTelegram = () => {
   }
   else {
     logging.add("Telegram photo without IR","info");
-		//camera.ir.queued = true;
   }
-  
-  /*
-  // Get the sunset and sunrise times using your suncalcStringToTime function
-  const sunsetTime = suncalcHelper.suncalcStringToTime('sunset-60');
-  const sunriseTime = suncalcHelper.suncalcStringToTime('sunrise+60');
-
-  // If either failed, we can't determine darkness and should return
-  if (!sunsetTime || !sunriseTime) {
-    camera.ir.queued = true;
-    return;
-  }
-
-  // Convert these times into today's moment objects
-  const sunsetMoment = moment().hour(sunsetTime.h).minute(sunsetTime.m);
-  const sunriseMoment = moment().hour(sunriseTime.h).minute(sunriseTime.m);
-
-  // Now, get the current moment
-  const currentMoment = moment();
-
-  // Check if it's dark based on sunset and sunrise times
-  if (currentMoment.isAfter(sunsetMoment) || currentMoment.isBefore(sunriseMoment)) {
-    camera.ir.queued = true;
-    logging.add("Telegram photo - it is dark, use IR","debug");  
-  }
-  else {
-    logging.add("Telegram photo - it is NOT dark, no IR","debug");
-  }*/
 }
 
 photoIntervalSec = () => {

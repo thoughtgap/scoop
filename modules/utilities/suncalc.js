@@ -77,7 +77,39 @@ const suncalcStringToTime = (configString) => {
     return false;
 };
 
+// Determines if it's currently dark outside based on sun position
+const isDark = () => {
+    // Check if location is configured properly
+    if (isNaN(suncalcConfig.lat) || isNaN(suncalcConfig.lon)) {
+        logging.add("isDark check failed: Location not properly configured", "warn");
+        // Fall back to a simple time-based check if location isn't set
+        return (moment().hour() >= 18 || moment().hour() < 8);
+    }
+    
+    try {
+        // Get current time and sun times
+        const now = moment();
+        const times = SunCalc.getTimes(new Date(), suncalcConfig.lat, suncalcConfig.lon);
+        
+        // Check if current time is before dawn or after dusk
+        // Using dawn and dusk for better twilight handling
+        const dawn = moment(times.dawn);
+        const dusk = moment(times.dusk);
+        
+        // It's dark if current time is after dusk or before dawn
+        const dark = now.isAfter(dusk) || now.isBefore(dawn);
+        
+        logging.add(`Darkness check: ${dark ? 'It is dark' : 'It is light'} (dawn: ${dawn.format('HH:mm')}, dusk: ${dusk.format('HH:mm')})`, "debug");
+        
+        return dark;
+    } catch (err) {
+        logging.add(`Error in isDark function: ${err.message}`, "error");
+        // Fall back to simple time-based check if calculation fails
+        return (moment().hour() >= 18 || moment().hour() < 8);
+    }
+};
+
 exports.configure = configure;
 exports.suncalcStringToTime = suncalcStringToTime;
 exports.getSunTimes = getSunTimes;
-
+exports.isDark = isDark;
