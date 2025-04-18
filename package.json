@@ -28,14 +28,11 @@
     "form-data": "^4.0.0",
     "libcamera": "^1.0.7",
     "moment": "^2.29.4",
-    "node-dht-sensor": "^0.4.3",
     "nodemon": "^3.1.7",
     "pi-temperature": "^3.0.0",
-    "pngjs": "^5.0.0",
     "stream": "0.0.2",
     "stream-buffers": "^3.0.2",
     "suncalc": "^1.8.0",
-    "telegram-bot-api": "^2.0.1",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1"
   }
