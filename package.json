@@ -21,22 +21,24 @@
   "homepage": "https://github.com/thoughtgap/schicke-chicks#readme",
   "dependencies": {
     "bme280": "^2.1.0",
+    "compression": "^1.8.0",
     "cron": "^1.8.2",
     "express": "^4.21.0",
     "express-sse": "^0.5.3",
     "heapdump": "^0.3.15",
+    "libcamera": "^1.0.7",
     "moment": "^2.29.4",
     "node-dht-sensor": "^0.4.3",
-    "node-raspistill": "^1.0.3",
     "nodemon": "^3.1.7",
     "onoff": "^6.0.2",
-    "pi-temperature": "^2.1.0",
+    "pi-temperature": "^3.0.0",
     "pngjs": "^5.0.0",
     "request": "^2.88.2",
-    "simple-node-logger": "^18.12.24",
     "stream": "0.0.2",
     "stream-buffers": "^3.0.2",
     "suncalc": "^1.8.0",
-    "telegram-bot-api": "^2.0.1"
+    "telegram-bot-api": "^2.0.1",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
   }
 }
