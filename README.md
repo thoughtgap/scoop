@@ -1,7 +1,5 @@
 # scoop 🐔
 
-> ⚠️ **WARNING**: This branch is a work in progress for Node.js 22 and Debian Bookworm compatibility. Some features might not be fully tested or working as expected.
-
 This is our **smart chicken coop** server. It is providing a web-based backend and (somewhat limited and hacky) frontend to control the coop's hatch and view its webcam and sensor data.
 
 - [scoop 🐔](#scoop-)
@@ -29,7 +27,7 @@ This is our **smart chicken coop** server. It is providing a web-based backend a
 ## Hardware
 The control unit consists of:
 
-* Raspberry Pi as control unit
+* Raspberry Pi 3B as control unit
 * 12V DC power supply
 * 12V motor (an old Ford window lifter) to wind the nylon thread that is lifting the hatch
 * Relay to control motor and LED
@@ -116,7 +114,7 @@ For the bot configuration, you'll need a token and chat ID, see [Telegram Bot AP
 ![Screenshot of Telegram Message](https://github.com/thoughtgap/scoop/blob/master/docs/telegram-bot.png?raw=true)
 
 ## Install & Run
-This branch is compatible with Node.js 22 and Debian Bookworm. Use NodeJS Version 22. Install with `npm install`.
+Compatible with Node.js 22 and Debian Bookworm. Use NodeJS Version 22. Install with `npm install`.
 
 ### Running with PM2
 The application is configured to run as a PM2 service. Here's how to set it up:
