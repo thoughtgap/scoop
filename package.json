@@ -1,7 +1,7 @@
 {
-  "name": "schicke-chicks",
+  "name": "scoop",
   "version": "1.0.0",
-  "description": "schicke-chicks server",
+  "description": "scoop server",
   "main": "index.js",
   "scripts": {
     "dev": "node node_modules/nodemon/bin/nodemon.js",
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thoughtgap/schicke-chicks.git"
+    "url": "git+https://github.com/thoughtgap/scoop.git"
   },
   "author": "moritz",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/thoughtgap/schicke-chicks/issues"
+    "url": "https://github.com/thoughtgap/scoop/issues"
   },
-  "homepage": "https://github.com/thoughtgap/schicke-chicks#readme",
+  "homepage": "https://github.com/thoughtgap/scoop#readme",
   "dependencies": {
     "axios": "^1.8.4",
     "bme280": "^2.1.0",
