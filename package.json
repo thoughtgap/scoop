@@ -30,7 +30,6 @@
     "moment": "^2.29.4",
     "node-dht-sensor": "^0.4.3",
     "nodemon": "^3.1.7",
-    "onoff": "^6.0.2",
     "pi-temperature": "^3.0.0",
     "pngjs": "^5.0.0",
     "request": "^2.88.2",
