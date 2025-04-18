@@ -5,10 +5,11 @@ var app = express();
 const fs = require('fs');
 const { PerformanceObserver, performance } = require('perf_hooks');
 var moment = require('moment');
+const compression = require('compression');
 
-var logging = require('./logging.js');
+var logging = require('./modules/utilities/logging.js');
 
-var events = require('./events.js');
+var events = require('./modules/utilities/events.js');
 
 let config = require('./config.json');
 const bootTimestamp = moment();
@@ -26,7 +27,7 @@ const skipGpio = {
   shelly: config.skipGpio.shelly
 }
 
-var gpioRelais = require('./gpio-relais.js');
+var gpioRelais = require('./modules/gpio/gpio-relais.js');
 gpioRelais.configure( config.gpioPorts.out.hoch,
                 config.gpioPorts.out.runter,
                 config.gpioPorts.out.ir,
@@ -37,7 +38,7 @@ gpioRelais.configure( config.gpioPorts.out.hoch,
 
 if(!skipGpio.bme280) {
   logging.add("Initializing BME280 Temperature Sensor");
-  var bme280 = require('./temperature-bme280.js');
+  var bme280 = require('./modules/temperature/bme280.js');
   bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
   logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`);
   bme280.readSensor();
@@ -58,14 +59,14 @@ getHumidity = () => {
   return null;
 }
 
-var telegram = require('./telegram.js');
+var telegram = require('./modules/integrations/telegram.js');
 telegram.configure(config.telegram.sendMessages,
                   config.telegram.token,
                   config.telegram.chatId);
 
 if(!skipGpio.dht22) {
   logging.add("Initializing DHT22 Temperature Sensor");
-  var dht22 = require('./temperature-dht22.js');
+  var dht22 = require('./modules/temperature/dht22.js');
   dht22.configure(config.gpioPorts.out.dht22, config.intervals.dht22);
   dht22.readSensor();
 }
@@ -75,7 +76,7 @@ else {
 
 if(!skipGpio.cpuTemp) {
   logging.add("Initializing CPU Temperature Sensor");
-  var cpuTemp = require('./temperature-cpu.js');
+  var cpuTemp = require('./modules/temperature/cpu.js');
   cpuTemp.configure(config.intervals.cpu);
   cpuTemp.readSensor();
 }
@@ -83,7 +84,7 @@ else {
   logging.add("Skipping CPU Temperature Sensor");
 }
 
-var klappenModul = require('./klappe.js');
+var klappenModul = require('./modules/hatch/klappe.js');
 klappenModul.configure(
   config.sensorObenMontiert,
   config.sensorUntenMontiert,
@@ -171,7 +172,7 @@ function sensorUntenWert(value,err) {
 
     // Wenn der Motor gerade runter fährt,
     // und der Sensor betätigt wird, halte den Motor an.
-    if(value == 0) {
+    if(value == 0) {
       klappenModul.stoppeKlappe();
     }
   }
@@ -214,7 +215,7 @@ leseSensoren();
 //   // !TODO
 //   // Hiermit kann man setzen, ob die einzelnen Sensoren montiert sind oder nicht.
 //   // Falls ein Sensor kaputt geht kann man die Sensoren-Sicherheitsnetze so umgehen.
-//   if((pos == "oben" || pos == "unten") && (boo == true || boo == false)) {
+//   if((pos == "oben" || pos == "unten") && (boo == true || boo == false)) {
 //     if(pos == "oben") {
 //       sensorObenMontiert = boo;
 //     }
@@ -234,23 +235,25 @@ leseSensoren();
 
 klappenModul.init();
 
-var camera = require('./camera.js');
+var camera = require('./modules/camera/camera.js');
 camera.configure(config.camera.intervalSec, config.camera.maxAgeSec, config.camera.autoTakeMin);
 
-var suncalcHelper = require('./suncalc.js');
+var suncalcHelper = require('./modules/utilities/suncalc.js');
 suncalcHelper.configure(config.location.lat,config.location.lon);
 
-var heating = require('./heating.js');
+var heating = require('./modules/climate/heating.js');
 heating.configure(config.light);
 
-var cronTasks = require('./cron-tasks.js');
+var cronTasks = require('./modules/scheduling/cron-tasks.js');
 cronTasks.configure(  config.location
                     , config.hatchAutomation
                     , config.light);
 
-var shelly = require('./shelly.js');
+var shelly = require('./modules/integrations/shelly.js');
 shelly.configure(config.shelly.url, config.shelly.intervalSec);
 shelly.getShellyStatus();
+
+app.use(compression());
 
 // Handle http requests
 app.use(function(req, res, next) {
@@ -267,28 +270,8 @@ app.get('/', function (req, res) {
   res.redirect('/frontend/index.html');
 });
 
-// Hacky frontend delivery
-app.get('/frontend/index.html', function (req, res) {
-  res.sendFile(__dirname + '/frontend/index.html');
-});
-app.get('/frontend/coop.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/coop.js');
-});
-app.get('/frontend/chick.svg', function (req, res) {
-  res.sendFile(__dirname + '/frontend/chick.svg');
-});
-app.get('/frontend/angular.min.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/angular.min.js');
-});
-app.get('/frontend/moment.min.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/moment.min.js');
-});
-app.get('/frontend/angular-moment.min.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/angular-moment.min.js');
-});
-app.get('/frontend/de.min.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/de.min.js');
-});
+// Deliver frontend
+app.use('/frontend', express.static(__dirname + '/frontend'));
 
 app.get('/status', function (req, res) {
   res.send({
@@ -435,15 +418,6 @@ app.get('/cam.jpg', function (req, res) {
   else {
     res.send({message:"geht nicht"});
   }
-});
-app.get('/heapdump', function (req, res) {
-  // For debugging memory leaks
-  logging.add(`Extracting Heap dump`);
-  const heapdump = require("heapdump");
-  heapdump.writeSnapshot((err, filename) => {
-    logging.add(`Heap dump written to ${filename}`);
-    res.send(`Heap dump written to ${filename}`);
-  });
 });
 app.get('/shelly/inform/:onoff', function (req, res) {
   shelly.setShellyRelayStatusOnOff(req.params.onoff);

@@ -1,10 +1,10 @@
 var CronJob = require('cron').CronJob;
 var moment = require('moment');
-var logging = require('./logging.js');
-var suncalcHelper = require('./suncalc.js');
-var klappenModul = require('./klappe.js');
-var heating = require('./heating.js');
-var camera = require('./camera.js');
+var logging = require('../utilities/logging.js');
+var suncalcHelper = require('../utilities/suncalc.js');
+var klappenModul = require('../hatch/klappe.js');
+var heating = require('../climate/heating.js');
+var camera = require('../camera/camera.js');
 
 //const cronTelegrams = ["0 */30 7-8 * * *", "0 */30 17-19 * * *", "0 0-40 20 * * *"];
 //const cronTelegram = "0 */30 6-9 * * *";

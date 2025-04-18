@@ -1,8 +1,9 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 var moment = require('moment');
-var gpioRelais = require('./gpio-relais.js');
-var events = require('./events.js');
-var telegram = require('./telegram.js');
+var gpioRelais = require('../gpio/gpio-relais.js');
+var events = require('../utilities/events.js');
+var telegram = require('../integrations/telegram.js');
+var suncalcHelper = require('../utilities/suncalc.js');
 
 var camera = {
     image: null,
@@ -46,8 +47,8 @@ var cameraTimeStats = [];
 const cameraTimeStatsSince = moment();
 
 // Camera Objects
-const Raspistill = require('node-raspistill').Raspistill;
-const cam = new Raspistill(cameraConfig.raspistill);
+const LibCameraWrapper = require('./libcamera-wrapper.js');
+const cam = new LibCameraWrapper(cameraConfig.raspistill);
 
 configure = (intervalSec, maxAgeSec, autoTakeMin) => {
     camera.intervalSec = intervalSec;
@@ -70,6 +71,7 @@ queueNightvision = () => {
   camera.ir.queued = true;
 }
 
+// TODO Implement check if it's dark
 queueTelegram = () => {
   camera.telegramQueue = true;
   var isDark = (moment().hour() >= 18 || moment().hour() < 8);
@@ -82,6 +84,33 @@ queueTelegram = () => {
     logging.add("Telegram photo without IR","info");
 		//camera.ir.queued = true;
   }
+  
+  /*
+  // Get the sunset and sunrise times using your suncalcStringToTime function
+  const sunsetTime = suncalcHelper.suncalcStringToTime('sunset-60');
+  const sunriseTime = suncalcHelper.suncalcStringToTime('sunrise+60');
+
+  // If either failed, we can't determine darkness and should return
+  if (!sunsetTime || !sunriseTime) {
+    camera.ir.queued = true;
+    return;
+  }
+
+  // Convert these times into today's moment objects
+  const sunsetMoment = moment().hour(sunsetTime.h).minute(sunsetTime.m);
+  const sunriseMoment = moment().hour(sunriseTime.h).minute(sunriseTime.m);
+
+  // Now, get the current moment
+  const currentMoment = moment();
+
+  // Check if it's dark based on sunset and sunrise times
+  if (currentMoment.isAfter(sunsetMoment) || currentMoment.isBefore(sunriseMoment)) {
+    camera.ir.queued = true;
+    logging.add("Telegram photo - it is dark, use IR","debug");  
+  }
+  else {
+    logging.add("Telegram photo - it is NOT dark, no IR","debug");
+  }*/
 }
 
 photoIntervalSec = () => {

@@ -1,15 +1,6 @@
 {
-  "skipGpio": {
-    "motor": true,
-    "dht22": false,
-    "sensoren": true,
-    "bme280": true,
-    "cputemp": true,
-    "ir": true
-  },
   "gpioPorts": {
     "in": {
-      "dht22": 14,
       "oben": 5,
       "unten": 6,
       "bme280": "0x76"
@@ -28,8 +19,6 @@
   "motorAus": 1,
   "motorEin": 0,
   "intervals": {
-    "dht22": 30,
-    "dht22OnError": 300,
     "cpu": 30,
     "sensoren": 1,
     "bme280": 60
@@ -40,12 +29,18 @@
     "maxAgeSec": 10
   },
   "location": {
-    "lat": 52, 
+    "lat": 52,
     "lon": 8
   },
   "hatchAutomation": {
-    "openTimes": ["06:30","sunrise+30"],
-    "closeTimes": ["22:00","sunset-30"]
+    "openTimes": [
+      "06:30",
+      "sunrise+30"
+    ],
+    "closeTimes": [
+      "22:00",
+      "sunset-30"
+    ]
   },
   "light": {
     "enabled": true,
@@ -54,7 +49,7 @@
         "door": "closed",
         "heatBelowC": null,
         "from": "sunrise+20",
-        "to":   "dusk+30",
+        "to": "dusk+30",
         "enabled": true,
         "minimumLightMins": 10
       },
@@ -62,7 +57,7 @@
         "door": "any",
         "heatBelowC": 5,
         "from": "sunrise-20",
-        "to":   "dusk+30",
+        "to": "dusk+30",
         "enabled": true,
         "minimumLightMins": 10
       },
@@ -70,7 +65,7 @@
         "door": "any",
         "heatBelowC": null,
         "from": "sunset-30",
-        "to":   "dusk+30",
+        "to": "dusk+30",
         "enabled": true,
         "minimumLightMins": null
       }

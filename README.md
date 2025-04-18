@@ -1,4 +1,5 @@
 # scoop 🐔
+
 This is our **smart chicken coop** server. It is providing a web-based backend and (somewhat limited and hacky) frontend to control the coop's hatch and view its webcam and sensor data.
 
 - [scoop 🐔](#scoop-)
@@ -26,7 +27,7 @@ This is our **smart chicken coop** server. It is providing a web-based backend a
 ## Hardware
 The control unit consists of:
 
-* Raspberry Pi as control unit
+* Raspberry Pi 3B as control unit
 * 12V DC power supply
 * 12V motor (an old Ford window lifter) to wind the nylon thread that is lifting the hatch
 * Relay to control motor and LED
@@ -113,10 +114,48 @@ For the bot configuration, you'll need a token and chat ID, see [Telegram Bot AP
 ![Screenshot of Telegram Message](https://github.com/thoughtgap/scoop/blob/master/docs/telegram-bot.png?raw=true)
 
 ## Install & Run
-Use NodeJS Version 12. Install with `npm install`.
+Compatible with Node.js 22 and Debian Bookworm. Use NodeJS Version 22. Install with `npm install`.
 
-Run with `node stall.js`. I host the service with [pm2](https://pm2.keymetrics.io/).
+### Running with PM2
+The application is configured to run as a PM2 service. Here's how to set it up:
 
+1. Install PM2 globally:
+```bash
+npm install -g pm2
+```
+
+2. Create logs directory:
+```bash
+mkdir -p logs
+```
+
+3. Start the service:
+```bash
+pm2 start ecosystem.config.js
+```
+
+4. To make the service start on system boot:
+```bash
+pm2 startup
+pm2 save
+```
+
+#### Useful PM2 Commands
+- Check status: `pm2 status`
+- View logs: `pm2 logs scoop`
+- Restart service: `pm2 restart scoop`
+- Stop service: `pm2 stop scoop`
+- Delete service: `pm2 delete scoop`
+
+The service is configured with:
+- Auto-restart on crashes
+- Maximum 10 restart attempts
+- 4-second delay between restarts
+- Production environment
+- Logging with timestamps
+- Separate error and output logs in the logs directory
+
+For development, you can also run directly with `node stall.js`.
 
 ## Web Endpoints
 
@@ -153,7 +192,6 @@ To tell the hatch if it is up or down
 
 
 ### Administrative
-* `/heapdump` will send a heapdump
 * `/reset` will restart the application if it's run via nodemon (will modify a test.js file). Don't judge, please!
 
 

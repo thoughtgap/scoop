@@ -1,10 +1,10 @@
-var logging = require('./logging.js');
-var shelly = require('./shelly.js');
+var logging = require('../utilities/logging.js');
+var shelly = require('../integrations/shelly.js');
 var moment = require('moment');
-var events = require('./events.js');
-var suncalcHelper = require('./suncalc.js');
-var klappenModul = require('./klappe.js');
-var bme280 = require('./temperature-bme280.js');
+var events = require('../utilities/events.js');
+var suncalc = require('../utilities/suncalc.js');
+var klappenModul = require('../hatch/klappe.js');
+var bme280 = require('../temperature/bme280.js');
 
 var config = {
     "conditions": [
@@ -58,8 +58,8 @@ configure = (lightConfigObj) => {
             }
 
             // Time checking
-            const fromTime = suncalcHelper.suncalcStringToTime(lightConfig.from);
-            const toTime   = suncalcHelper.suncalcStringToTime(lightConfig.to);
+            const fromTime = suncalc.suncalcStringToTime(lightConfig.from);
+            const toTime   = suncalc.suncalcStringToTime(lightConfig.to);
 
             if(!fromTime || !toTime) {
                 logging.add("Invalid Time for Light Configuration.","warn");

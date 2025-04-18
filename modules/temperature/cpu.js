@@ -1,4 +1,4 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 var moment = require('moment');
 var cpuTemp = require("pi-temperature");
 

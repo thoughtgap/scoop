@@ -1,6 +1,7 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 const { isDuration } = require('moment');
 const performance = require('perf_hooks').performance;
+const gpioControl = require('./gpio-control.js');
 
 var motorConfig = {
     configured: false,
@@ -45,16 +46,18 @@ configure = (pinHoch, pinRunter, pinIR, motorAus, motorEin, skipGpio, skipGpioIR
 };
 
 init = () => {    
-    if(!motorConfig.skipGpio || !motorConfig.skipGpioIR) {
-        global.Gpio = require('onoff').Gpio;
+    if(!motorConfig.skipGpio || !motorConfig.skipGpioIR) {
+        gpioControl.configure(motorConfig.skipGpio).catch(err => {
+            logging.add(`Error initializing GPIO control: ${err.message}`, 'error');
+        });
     }
 
     if (motorConfig.skipGpio) {
         logging.add("Skipping real gpioMotor init due to skipGpio");
     }
     else {
-        global.klappeHoch = new Gpio(motorConfig.pinHoch, 'high');
-        global.klappeRunter = new Gpio(motorConfig.pinRunter, 'high');
+        global.klappeHoch = gpioControl.createGpioWrapper(motorConfig.pinHoch, 'high');
+        global.klappeRunter = gpioControl.createGpioWrapper(motorConfig.pinRunter, 'high');
         motorConfig.gpioInit = true;
         logging.add("motorGpio initialized");
     }
@@ -63,7 +66,7 @@ init = () => {
         logging.add("Skipping real gpioIR init due to skipGpio");
     }
     else {
-        global.gpioIR = new Gpio(motorConfig.pinIR, 'high');
+        global.gpioIR = gpioControl.createGpioWrapper(motorConfig.pinIR, 'high');
         motorConfig.gpioIRInit = true;
         logging.add("gpioIR initialized");
     }
@@ -78,8 +81,8 @@ stoppeMotor = () => {
         logging.add("Cannot stop motor, Gpio not initialized");
     }
     else {
-        klappeHoch.writeSync(motorConfig.motorAus);
-        klappeRunter.writeSync(motorConfig.motorAus);
+        global.klappeHoch.writeSync(motorConfig.motorAus);
+        global.klappeRunter.writeSync(motorConfig.motorAus);
     }
 }
 
@@ -93,8 +96,8 @@ fahreHoch = () => {
     }
     else {
         setNightVision(false);
-        klappeHoch.writeSync(motorConfig.motorEin);
-        klappeRunter.writeSync(motorConfig.motorAus);
+        global.klappeHoch.writeSync(motorConfig.motorEin);
+        global.klappeRunter.writeSync(motorConfig.motorAus);
     }
 }
 
@@ -109,8 +112,8 @@ fahreRunter = () => {
     }
     else {
         setNightVision(false);
-        klappeHoch.writeSync(motorConfig.motorAus);
-        klappeRunter.writeSync(motorConfig.motorEin);
+        global.klappeHoch.writeSync(motorConfig.motorAus);
+        global.klappeRunter.writeSync(motorConfig.motorEin);
     }
 }
 
@@ -119,11 +122,10 @@ setNightVision = (onoff) => {
         logging.add("gpio-relais.setNightVision(true) Motor is running, cannot turn on IR!","debug");
         return false;
     }
-    else if (onoff == true || onoff == false) {
-
+    else if (onoff == true || onoff == false) {
         let newStatus = (onoff == true ? motorConfig.motorEin : motorConfig.motorAus);
         logging.add("gpio-relais.setNightVision(true) Turning Night Vision "+(onoff ? "on" : "off"),"debug");
-        gpioIR.writeSync(newStatus);
+        global.gpioIR.writeSync(newStatus);
         IRlogChange(onoff);
         return true;
     }
@@ -135,12 +137,12 @@ setNightVision = (onoff) => {
 
 motorIsOn = () => {
     // Returns if the motor is moving
-    return klappeHoch.readSync() == motorConfig.motorEin || klappeRunter.readSync() == motorConfig.motorEin;
+    return global.klappeHoch.readSync() == motorConfig.motorEin || global.klappeRunter.readSync() == motorConfig.motorEin;
 }
 
 IRIsOn = () => {
-    let status = gpioIR.readSync() == motorConfig.motorEin;
-    logging.add(`IR on:  ${status}`); 
+    let status = global.gpioIR.readSync() == motorConfig.motorEin;
+    logging.add(`IR on: ${status}`); 
     return status;
 }
 

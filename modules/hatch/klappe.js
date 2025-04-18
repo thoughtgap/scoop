@@ -1,8 +1,10 @@
-var logging = require('./logging.js');
-var gpioMotor = require('./gpio-relais.js');
-var events = require('./events.js');
-var camera = require('./camera.js');
-var heating = require('./heating.js');
+var logging = require('../utilities/logging.js');
+var moment = require('moment');
+var gpioRelais = require('../gpio/gpio-relais.js');
+var events = require('../utilities/events.js');
+var suncalc = require('../utilities/suncalc.js');
+var camera = require('../camera/camera.js');
+var heating = require('../climate/heating.js');
 const fs = require('fs');
 
 var klappe = {
@@ -221,12 +223,12 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
             // Starte den Motor jetzt.
             if (richtung == "hoch") {
                 if (!config.skipGpio.motor) {
-                    gpioMotor.fahreHoch();
+                    gpioRelais.fahreHoch();
                 }
             }
             else if (richtung == "runter") {
                 if (!config.skipGpio.motor) {
-                    gpioMotor.fahreRunter();
+                    gpioRelais.fahreRunter();
                 }
             }
 
@@ -272,7 +274,7 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
 };
 
 stoppeKlappe = () => {
-    gpioMotor.stoppeMotor();
+    gpioRelais.stoppeMotor();
     setKlappenStatus("angehalten",null);
 
     // Take a picture and send via Telegram
