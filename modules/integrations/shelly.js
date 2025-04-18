@@ -1,6 +1,6 @@
 var logging = require('../utilities/logging.js');
 var moment = require('moment');
-const request = require('request');
+const axios = require('axios');
 var events = require('../utilities/events.js');
 
 let status = {
@@ -24,60 +24,83 @@ const configure = (url, intervalSec) => {
 }
 
 getShellyStatus = (noRepeat = false) => {
-    if (!status.busy && config.url !== null) {
-        logging.add("Shelly getShellyStatus() getting relay data");
-        status.busy = true;
+    // Make the function return a promise but don't require callers to use await
+    const promise = (async () => {
+        if (!status.busy && config.url !== null) {
+            logging.add("Shelly getShellyStatus() getting relay data");
+            status.busy = true;
 
-        request(config.url+'/rpc/Switch.GetStatus?id=0', {json: true}, (error, res, body) => {
-            status.busy = false;
-        
-            if (!error && res.statusCode == 200) {
-                setShellyRelayStatus(body.output,'getShellyStatus()');
-            };
-
-            if(status.intervalSec && !noRepeat) {
-                logging.add("Shelly next value in "+status.intervalSec,'debug');
-                setTimeout(function erneutLesen() {
-                    getShellyStatus();
-                }, status.intervalSec * 1000);
-            }
-
-            if (error) {
-                logging.add(error,'warn');
+            try {
+                const response = await axios.get(`${config.url}/rpc/Switch.GetStatus?id=0`, {
+                    timeout: 5000 // 5 second timeout
+                });
+                status.busy = false;
+                
+                if (response.status === 200) {
+                    setShellyRelayStatus(response.data.output, 'getShellyStatus()');
+                }
+                
+                if(status.intervalSec && !noRepeat) {
+                    logging.add("Shelly next value in "+status.intervalSec, 'debug');
+                    setTimeout(function erneutLesen() {
+                        getShellyStatus();
+                    }, status.intervalSec * 1000);
+                }
+                return true;
+            } catch (error) {
+                status.busy = false;
+                logging.add(error.message, 'warn');
+                
+                if(status.intervalSec && !noRepeat) {
+                    logging.add("Shelly next value in "+status.intervalSec, 'debug');
+                    setTimeout(function erneutLesen() {
+                        getShellyStatus();
+                    }, status.intervalSec * 1000);
+                }
                 return false;
-            };
-        });
-    }
-    else {
-        logging.add("Shelly getShellyStatus() - busy (skip)");
-    }
-}
-
-const shellyRequestOptions = {
-    json: true,
-    maxAttempts: 5,  // (default) try 5 times 
-    retryDelay: 5000, // (default) wait for 5s before trying again
+            }
+        }
+        else {
+            logging.add("Shelly getShellyStatus() - busy (skip)");
+            return false;
+        }
+    })();
+    
+    // Handle errors silently to maintain backward compatibility
+    promise.catch(err => {
+        logging.add(`Error in getShellyStatus: ${err.message}`, 'error');
+    });
+    
+    return promise;
 }
 
 const turnShellyRelay = (onOff, retryCount = null) => {
+    // Make the function return a promise but don't require callers to use await
+    const promise = (async () => {
+        if(retryCount > 900) { 
+            // Try max 30mins 
+            logging.add("Shelly turnShellyRelay() - retried too often, not trying anymore");
+            return false;
+        }
+        else if (config.url !== null && (onOff == 'on' || onOff == 'off')) {
+            //logging.add(`Shelly turnShellyRelay(${onOff})`);
 
-    if(retryCount > 900) { 
-        // Try max 30mins 
-        logging.add("Shelly turnShellyRelay() - retried too often, not trying anymore");
-        return false;
-    }
-    else if (config.url !== null && (onOff == 'on' || onOff == 'off')) {
-        //logging.add(`Shelly turnShellyRelay(${onOff})`);
-
-        const rpcCommand = onOff === 'on' ? 'true' : 'false';
-        request(config.url+'/rpc/Switch.Set?id=0&on='+rpcCommand, shellyRequestOptions, (error, res, body) => {
-        
-            if (!error && res.statusCode == 200) {
-                setShellyRelayStatus(body.was_on,'turnShellyRelay()');
-            };
-
-            if (error) {
-                logging.add(error,'warn');
+            const rpcCommand = onOff === 'on' ? 'true' : 'false';
+            
+            try {
+                const response = await axios.get(`${config.url}/rpc/Switch.Set?id=0&on=${rpcCommand}`, {
+                    timeout: 5000, // 5 second timeout
+                    maxAttempts: 5,  // try 5 times
+                    retryDelay: 5000 // wait for 5s before trying again
+                });
+                
+                if (response.status === 200) {
+                    setShellyRelayStatus(response.data.was_on, 'turnShellyRelay()');
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                logging.add(error.message, 'warn');
 
                 // Try again if failed
                 if(retryCount === null) {
@@ -86,22 +109,30 @@ const turnShellyRelay = (onOff, retryCount = null) => {
                 logging.add("Shelly turnShellyRelay() - failed - try again in 2s");
                 setTimeout(() => {
                     turnShellyRelay(onOff, (retryCount + 1));
-                },2000);
+                }, 2000);
                 
                 return false;
-            };
-        });
-    }
-    else {
-        logging.add("Shelly turnShellyRelay() - invalid config or command (skip)");
-    }
+            }
+        }
+        else {
+            logging.add("Shelly turnShellyRelay() - invalid config or command (skip)");
+            return false;
+        }
+    })();
+    
+    // Handle errors silently to maintain backward compatibility
+    promise.catch(err => {
+        logging.add(`Error in turnShellyRelay: ${err.message}`, 'error');
+    });
+    
+    return promise;
 }
 
 // Shelly IO URL Actions will push the Relay State (on/off) to the coop, no need to poll regularly
 setShellyRelayStatusOnOff = (onOff) => {
     if(onOff == 'on' || onOff == 'off') {
         logging.add(`Shelly receiving setShellyRelayStatusOnOff(${onOff})`);
-        setShellyRelayStatus(onOffToBool(onOff),'setShellyRelayStatusOnOff');
+        setShellyRelayStatus(onOffToBool(onOff), 'setShellyRelayStatusOnOff');
     }
     else {
         logging.add(`Shelly receiving invalid setShellyRelayStatusOnOff(on,off)`);
@@ -126,11 +157,11 @@ const boolToOnOff = (bool) => {
     }
 }
 
-const setShellyRelayStatus = (onOffBool,source) => {
+const setShellyRelayStatus = (onOffBool, source) => {
     status.time = moment();
     status.relay.ison = onOffBool;
     status.source = source;
-    events.send('shellyRelayIsOn',onOffBool);
+    events.send('shellyRelayIsOn', onOffBool);
 }
 
 exports.configure = configure;

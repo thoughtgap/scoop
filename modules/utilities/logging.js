@@ -1,5 +1,5 @@
 var moment = require('moment');
-const request = require('request');
+const axios = require('axios');
 const winston = require('winston');
 require('winston-daily-rotate-file');
 
@@ -35,6 +35,10 @@ const logger = winston.createLogger({
 
 const validLogLevels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'];
 
+function validLogLevel(level, defaultLevel = 'info') {
+    return validLogLevels.includes(level) ? level : defaultLevel;
+}
+
 add = (message, type = "info") => {
     type = validLogLevel(type, 'info');
     logger.log(type, message);
@@ -43,14 +47,6 @@ add = (message, type = "info") => {
 const setLogLevel = (logLevel) => {
     logLevel = validLogLevel(logLevel);
     logger.level = logLevel;
-}
-
-const validLogLevel = (logLevel, fallback) => {
-    if(!validLogLevels.includes(logLevel)) {
-        logger.warn(`Invalid Log Level ${logLevel} changed to ${fallback}`);
-        return fallback;
-    }
-    return logLevel;
 }
 
 // Logging to Thingspeak
@@ -69,12 +65,27 @@ thingspeakSetAPIKey = (apikey) => {
 thingspeakLog = (urlStr) => {
     if (thingSpeakConfig.enable) {
         add("Thingspeak Log " + urlStr, 'debug');
-        request(thingSpeakConfig.baseUrl + urlStr, { json: true }, (err, res, body) => {
-            if (err) {
-                add(err, 'warn');
+        
+        // Execute asynchronously but don't require await
+        const promise = (async () => {
+            try {
+                await axios.get(thingSpeakConfig.baseUrl + urlStr);
+                return true;
+            } catch (err) {
+                add(err.message, 'warn');
+                return false;
             }
+        })();
+        
+        // Handle errors silently to maintain backward compatibility
+        promise.catch(err => {
+            add(`Error in thingspeakLog: ${err.message}`, 'warn');
         });
+        
+        return promise;
     }
+    
+    return Promise.resolve(false);
 }
 
 exports.add = add;

@@ -1,5 +1,6 @@
 var logging = require('../utilities/logging.js');
-const request = require('request');
+const axios = require('axios');
+const FormData = require('form-data');
 const fs = require('fs');
 
 var telegramConfig = {
@@ -15,12 +16,29 @@ configure = (sendMessages, token, chatId) => {
 };
 
 /**
- * Send a photo via Telegram
+ * Send a message via Telegram
  * @param {string} message Message to be sent
  */
 const sendMessages = (message) => {
     if (!telegramConfig.sendMessages) { return false; }
-    request(`https://api.telegram.org/${telegramConfig.token}/sendMessages?chat_id=${telegramConfig.chatId}&text=${encodeURIComponent(message)}`, {}, (err, res, body) => { });
+    
+    // Execute asynchronously but don't require await
+    const promise = (async () => {
+        try {
+            await axios.get(`https://api.telegram.org/${telegramConfig.token}/sendMessage?chat_id=${telegramConfig.chatId}&text=${encodeURIComponent(message)}`);
+            return true;
+        } catch (err) {
+            logging.add(`Error sending Telegram message: ${err.message}`, 'warn');
+            return false;
+        }
+    })();
+    
+    // Handle errors silently to maintain backward compatibility
+    promise.catch(err => {
+        logging.add(`Error in sendMessages: ${err.message}`, 'error');
+    });
+    
+    return promise;
 }
 
 /**
@@ -30,21 +48,41 @@ const sendMessages = (message) => {
 const sendPhoto = (photo) => {
     if (!telegramConfig.sendMessages) { return false; }
 
-    logging.add("Telegram SendPhoto",'debug');
-    const url = `https://api.telegram.org/${telegramConfig.token}/sendPhoto?chat_id=${telegramConfig.chatId}`;
-    console.log(url);
-
-    const post = request.post({url}, (err, httpResponse, body) => !err
-        ? logging.add('Telegram Upload successful!','debug')
-        : logging.add("Telegram Upload failed")
-    );
-
-    const form = post.form();
-    form.append(
-        'photo',
-        Buffer.from(photo, 'base64'),
-        {filename: 'image.jpg'}
-    );
+    logging.add("Telegram SendPhoto", 'debug');
+    const url = `https://api.telegram.org/${telegramConfig.token}/sendPhoto`;
+    
+    // Execute asynchronously but don't require await
+    const promise = (async () => {
+        try {
+            const form = new FormData();
+            form.append(
+                'chat_id',
+                telegramConfig.chatId
+            );
+            form.append(
+                'photo',
+                Buffer.from(photo, 'base64'),
+                {filename: 'image.jpg'}
+            );
+            
+            const response = await axios.post(url, form, {
+                headers: form.getHeaders()
+            });
+            
+            logging.add('Telegram Upload successful!', 'debug');
+            return true;
+        } catch (err) {
+            logging.add(`Telegram Upload failed: ${err.message}`, 'warn');
+            return false;
+        }
+    })();
+    
+    // Handle errors silently to maintain backward compatibility
+    promise.catch(err => {
+        logging.add(`Error in sendPhoto: ${err.message}`, 'error');
+    });
+    
+    return promise;
 }
 
 exports.configure = configure;
