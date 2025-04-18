@@ -172,7 +172,7 @@ function sensorUntenWert(value,err) {
 
     // Wenn der Motor gerade runter fährt,
     // und der Sensor betätigt wird, halte den Motor an.
-    if(value == 0) {
+    if(value == 0) {
       klappenModul.stoppeKlappe();
     }
   }
@@ -215,7 +215,7 @@ leseSensoren();
 //   // !TODO
 //   // Hiermit kann man setzen, ob die einzelnen Sensoren montiert sind oder nicht.
 //   // Falls ein Sensor kaputt geht kann man die Sensoren-Sicherheitsnetze so umgehen.
-//   if((pos == "oben" || pos == "unten") && (boo == true || boo == false)) {
+//   if((pos == "oben" || pos == "unten") && (boo == true || boo == false)) {
 //     if(pos == "oben") {
 //       sensorObenMontiert = boo;
 //     }
@@ -270,28 +270,8 @@ app.get('/', function (req, res) {
   res.redirect('/frontend/index.html');
 });
 
-// Hacky frontend delivery
-app.get('/frontend/index.html', function (req, res) {
-  res.sendFile(__dirname + '/frontend/index.html');
-});
-app.get('/frontend/coop.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/coop.js');
-});
-app.get('/frontend/chick.svg', function (req, res) {
-  res.sendFile(__dirname + '/frontend/chick.svg');
-});
-app.get('/frontend/angular.min.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/angular.min.js');
-});
-app.get('/frontend/moment.min.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/moment.min.js');
-});
-app.get('/frontend/angular-moment.min.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/angular-moment.min.js');
-});
-app.get('/frontend/de.min.js', function (req, res) {
-  res.sendFile(__dirname + '/frontend/de.min.js');
-});
+// Deliver frontend
+app.use('/frontend', express.static(__dirname + '/frontend'));
 
 app.get('/status', function (req, res) {
   res.send({
