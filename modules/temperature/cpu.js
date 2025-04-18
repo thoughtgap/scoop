@@ -1,6 +1,7 @@
 var logging = require('../utilities/logging.js');
 var moment = require('moment');
 var cpuTemp = require("pi-temperature");
+var events = require('../utilities/events.js');
 
 var status = {
     busy: false,
@@ -33,6 +34,9 @@ readCPUTemp = () => {
               status.time = new moment();
               logging.add(`CPU ${temp}°C`,"debug");
               logging.thingspeakLog("field4="+status.values.temperature);
+              
+              // Send CPU temperature event
+              events.send('cpu_temperature', parseFloat(temp).toFixed(0));
             }
             if(status.intervalSec) {
               setTimeout(function temperaturErneutLesen() {

@@ -2,6 +2,7 @@ var logging = require('../utilities/logging.js');
 const bme280 = require('bme280');
 var moment = require('moment');
 var heating = require('../climate/heating.js');
+var events = require('../utilities/events.js');
 
 var status = {
     busy: false,
@@ -68,6 +69,10 @@ readBME280 = () => {
             status.time = now;
             logging.add(`BME280 temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`,"debug");
             logging.thingspeakLog("field1="+status.values.temperature.toFixed(2)+"&field2="+status.values.pressure.toFixed(2)+"&field3="+status.values.humidity.toFixed(2));
+
+            // Send temperature and humidity events
+            events.send('temperature', status.values.temperature.toFixed(1));
+            events.send('humidity', status.values.humidity.toFixed(0));
 
             // Minutely history, preserved for one hour
             const keepEverySec = 60; // How often to preserve a value
