@@ -1,7 +1,9 @@
 .DS_Store
 sftp.json
+*.code-workspace
 
 config.json
+
 
 # Logs
 logs
