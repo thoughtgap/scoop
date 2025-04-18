@@ -1,4 +1,4 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 var dhtSensor = require("node-dht-sensor");
 var moment = require('moment');
 

@@ -1,7 +1,7 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 const { isDuration } = require('moment');
 const performance = require('perf_hooks').performance;
-const gpioControl = require('./modules/gpio-control.js');
+const gpioControl = require('./gpio-control.js');
 
 var motorConfig = {
     configured: false,

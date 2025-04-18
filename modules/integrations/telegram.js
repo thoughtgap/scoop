@@ -1,4 +1,4 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 const request = require('request');
 const fs = require('fs');
 

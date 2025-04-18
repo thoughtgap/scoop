@@ -1,9 +1,9 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 var moment = require('moment');
-var gpioRelais = require('./gpio-relais.js');
-var events = require('./events.js');
-var telegram = require('./telegram.js');
-var suncalcHelper = require('./suncalc.js');
+var gpioRelais = require('../gpio/gpio-relais.js');
+var events = require('../utilities/events.js');
+var telegram = require('../integrations/telegram.js');
+var suncalcHelper = require('../utilities/suncalc.js');
 
 var camera = {
     image: null,
@@ -47,7 +47,7 @@ var cameraTimeStats = [];
 const cameraTimeStatsSince = moment();
 
 // Camera Objects
-const LibCameraWrapper = require('./modules/camera/libcamera-wrapper.js');
+const LibCameraWrapper = require('./libcamera-wrapper.js');
 const cam = new LibCameraWrapper(cameraConfig.raspistill);
 
 configure = (intervalSec, maxAgeSec, autoTakeMin) => {

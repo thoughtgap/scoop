@@ -1,7 +1,7 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 var moment = require('moment');
 const request = require('request');
-var events = require('./events.js');
+var events = require('../utilities/events.js');
 
 let status = {
     busy: false,

@@ -1,7 +1,7 @@
-var logging = require('./logging.js');
+var logging = require('../utilities/logging.js');
 const bme280 = require('bme280');
 var moment = require('moment');
-var heating = require('./heating.js');
+var heating = require('../climate/heating.js');
 
 var status = {
     busy: false,
