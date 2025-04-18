@@ -47,8 +47,8 @@ var cameraTimeStats = [];
 const cameraTimeStatsSince = moment();
 
 // Camera Objects
-const Raspistill = require('node-raspistill').Raspistill;
-const cam = new Raspistill(cameraConfig.raspistill);
+const LibCameraWrapper = require('./modules/camera/libcamera-wrapper.js');
+const cam = new LibCameraWrapper(cameraConfig.raspistill);
 
 configure = (intervalSec, maxAgeSec, autoTakeMin) => {
     camera.intervalSec = intervalSec;

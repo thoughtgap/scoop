@@ -5,6 +5,7 @@ var app = express();
 const fs = require('fs');
 const { PerformanceObserver, performance } = require('perf_hooks');
 var moment = require('moment');
+const compression = require('compression');
 
 var logging = require('./logging.js');
 
@@ -251,6 +252,8 @@ cronTasks.configure(  config.location
 var shelly = require('./shelly.js');
 shelly.configure(config.shelly.url, config.shelly.intervalSec);
 shelly.getShellyStatus();
+
+app.use(compression());
 
 // Handle http requests
 app.use(function(req, res, next) {

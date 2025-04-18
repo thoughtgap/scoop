@@ -1,7 +1,7 @@
 .DS_Store
 sftp.json
 *.code-workspace
-
+modules/camera/tmp/camera.jpg
 config.json
 
 
