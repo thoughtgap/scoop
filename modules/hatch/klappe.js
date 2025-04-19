@@ -55,8 +55,13 @@ const init = () => {
         }
 
         try {
-            this.kalibriere(JSON.parse(data));
+            const position = JSON.parse(data);
+            this.kalibriere(position);
             logging.add("Read klappenPosition.json --> "+data);
+            
+            // Send initial position and status events
+            setKlappenPosition(position);
+            setKlappenStatus("angehalten", null);
         } catch(e) {
             logging.add(e); // error in the above string (in this case, yes)!
         }
@@ -306,6 +311,32 @@ kalibriere = (obenUnten) => {
     return { success: true, message: message };
 }
 
+const getDoorState = (position) => {
+    // Translate position into Home Assistant door state
+    // "oben" (up) = door is closed
+    // "unten" (down) = door is open
+    // null/undefined = unknown state
+    if (position === "oben") {
+        return "ON";  // Door is closed
+    } else if (position === "unten") {
+        return "OFF"; // Door is open
+    }
+    return "unknown";
+};
+
+const getMovementState = (status) => {
+    // Translate status into Home Assistant movement state
+    // "fahrehoch" or "fahrerunter" = moving
+    // "angehalten" = not moving
+    // null/undefined = unknown state
+    if (status === "fahrehoch" || status === "fahrerunter") {
+        return "ON";  // Moving
+    } else if (status === "angehalten") {
+        return "OFF"; // Not moving
+    }
+    return "unknown";
+};
+
 exports.configure = configure;
 exports.init = init;
 exports.klappe = klappe;
@@ -320,4 +351,6 @@ exports.klappeFahren = klappeFahren;
 exports.korrigiereRunter = korrigiereRunter;
 exports.korrigiereHoch = korrigiereHoch;
 exports.stoppeKlappe = stoppeKlappe;
+exports.getDoorState = getDoorState;
+exports.getMovementState = getMovementState;
 

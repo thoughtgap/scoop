@@ -3,6 +3,7 @@ const config = require('../../config.json');
 const logging = require('./logging.js');
 
 let client = null;
+let messageQueue = [];
 
 const connect = () => {
     if (!config.mqtt || !config.mqtt.broker) {
@@ -24,6 +25,8 @@ const connect = () => {
     client.on('connect', () => {
         logging.add('Connected to MQTT broker', 'info');
         setupHomeAssistantDiscovery();
+        // Process any queued messages
+        processMessageQueue();
     });
 
     client.on('error', (error) => {
@@ -33,6 +36,24 @@ const connect = () => {
     client.on('close', () => {
         logging.add('MQTT connection closed', 'warn');
     });
+};
+
+const processMessageQueue = () => {
+    if (!client || !client.connected) return;
+    
+    const queueLength = messageQueue.length;
+    if (queueLength > 0) {
+        logging.add(`Processing MQTT message queue (${queueLength} messages)`, 'info');
+    }
+    
+    while (messageQueue.length > 0) {
+        const { topic, message } = messageQueue.shift();
+        client.publish(topic, message.toString(), { retain: true }, (err) => {
+            if (err) {
+                logging.add(`MQTT publish error: ${err}`, 'error');
+            }
+        });
+    }
 };
 
 const setupHomeAssistantDiscovery = () => {
@@ -49,7 +70,7 @@ const setupHomeAssistantDiscovery = () => {
 
     // Temperature sensor
     const tempConfig = {
-        name: 'Scoop Temperature',
+        name: 'Temperature',
         unique_id: 'scoop_temperature',
         device_class: 'temperature',
         state_topic: 'scoop/temperature',
@@ -62,11 +83,11 @@ const setupHomeAssistantDiscovery = () => {
         payload_available: 'online',
         payload_not_available: 'offline'
     };
-    client.publish(`${discoveryPrefix}/sensor/scoop_temperature/config`, JSON.stringify(tempConfig), { retain: true });
+    client.publish(`${discoveryPrefix}/sensor/scoop/temperature/config`, JSON.stringify(tempConfig), { retain: true });
 
     // Humidity sensor
     const humidityConfig = {
-        name: 'Scoop Humidity',
+        name: 'Humidity',
         unique_id: 'scoop_humidity',
         device_class: 'humidity',
         state_topic: 'scoop/humidity',
@@ -79,11 +100,11 @@ const setupHomeAssistantDiscovery = () => {
         payload_available: 'online',
         payload_not_available: 'offline'
     };
-    client.publish(`${discoveryPrefix}/sensor/scoop_humidity/config`, JSON.stringify(humidityConfig), { retain: true });
+    client.publish(`${discoveryPrefix}/sensor/scoop/humidity/config`, JSON.stringify(humidityConfig), { retain: true });
 
     // CPU Temperature sensor
     const cpuTempConfig = {
-        name: 'Scoop CPU Temperature',
+        name: 'CPU Temperature',
         unique_id: 'scoop_cpu_temperature',
         device_class: 'temperature',
         icon: 'mdi:raspberry-pi',
@@ -97,7 +118,41 @@ const setupHomeAssistantDiscovery = () => {
         payload_available: 'online',
         payload_not_available: 'offline'
     };
-    client.publish(`${discoveryPrefix}/sensor/scoop_cpu_temperature/config`, JSON.stringify(cpuTempConfig), { retain: true });
+    client.publish(`${discoveryPrefix}/sensor/scoop/cpu_temperature/config`, JSON.stringify(cpuTempConfig), { retain: true });
+
+    // Hatch Door sensor
+    const hatchDoorConfig = {
+        name: 'Hatch',
+        unique_id: 'scoop_hatch_door',
+        device_class: 'door',
+        icon: 'mdi:door',
+        state_topic: 'scoop/hatch/door',
+        value_template: '{{ value_json.state }}',
+        device: device,
+        json_attributes_topic: 'scoop/hatch/door',
+        json_attributes_template: '{{ value_json | tojson }}',
+        availability_topic: 'scoop/status',
+        payload_available: 'online',
+        payload_not_available: 'offline'
+    };
+    client.publish(`${discoveryPrefix}/binary_sensor/scoop/hatch/door/config`, JSON.stringify(hatchDoorConfig), { retain: true });
+
+    // Hatch Movement sensor
+    const hatchMovementConfig = {
+        name: 'Hatch Movement',
+        unique_id: 'scoop_hatch_movement',
+        device_class: 'moving',
+        icon: 'mdi:arrow-up-down',
+        state_topic: 'scoop/hatch/movement',
+        value_template: '{{ value_json.state }}',
+        device: device,
+        json_attributes_topic: 'scoop/hatch/movement',
+        json_attributes_template: '{{ value_json | tojson }}',
+        availability_topic: 'scoop/status',
+        payload_available: 'online',
+        payload_not_available: 'offline'
+    };
+    client.publish(`${discoveryPrefix}/binary_sensor/scoop/hatch/movement/config`, JSON.stringify(hatchMovementConfig), { retain: true });
 
     // Publish initial availability
     client.publish('scoop/status', 'online', { retain: true });
@@ -105,7 +160,9 @@ const setupHomeAssistantDiscovery = () => {
 
 const publish = (topic, message) => {
     if (!client || !client.connected) {
-        logging.add('MQTT client not connected', 'warn');
+        // Queue the message if MQTT is not ready
+        messageQueue.push({ topic, message });
+        logging.add(`MQTT message queued (queue length: ${messageQueue.length})`, 'debug');
         return;
     }
 
