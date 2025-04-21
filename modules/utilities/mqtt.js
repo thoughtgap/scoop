@@ -26,13 +26,8 @@ const connect = () => {
     client.on('connect', () => {
         logging.add('Connected to MQTT broker', 'info');
         setupHomeAssistantDiscovery();
-        setupCommandSubscriptions();
         // Process any queued messages
         processMessageQueue();
-    });
-
-    client.on('message', (topic, message) => {
-        handleCommand(topic, message);
     });
 
     client.on('error', (error) => {
@@ -42,49 +37,6 @@ const connect = () => {
     client.on('close', () => {
         logging.add('MQTT connection closed', 'warn');
     });
-};
-
-const setupCommandSubscriptions = () => {
-    if (!client || !client.connected) return;
-    
-    // Subscribe to hatch command topics
-    client.subscribe('scoop/hatch/command');
-    logging.add('Subscribed to hatch command topics', 'info');
-};
-
-const handleCommand = (topic, message) => {
-    try {
-        const payload = JSON.parse(message.toString());
-        
-        switch(topic) {
-            case 'scoop/hatch/command':
-                handleHatchCommand(payload);
-                break;
-        }
-    } catch (error) {
-        logging.add(`Error handling MQTT command: ${error}`, 'error');
-    }
-};
-
-const handleHatchCommand = (payload) => {
-    if (!payload.action) {
-        logging.add('Hatch command missing action', 'warn');
-        return;
-    }
-
-    switch(payload.action) {
-        case 'open':
-            klappe.klappeFahren('runter');
-            break;
-        case 'close':
-            klappe.klappeFahren('hoch');
-            break;
-        case 'stop':
-            klappe.stoppeKlappe();
-            break;
-        default:
-            logging.add(`Unknown hatch command action: ${payload.action}`, 'warn');
-    }
 };
 
 const processMessageQueue = () => {
@@ -202,30 +154,6 @@ const setupHomeAssistantDiscovery = () => {
         payload_not_available: 'offline'
     };
     publish(`${discoveryPrefix}/binary_sensor/scoop_hatch_movement/config`, JSON.stringify(hatchMovementConfig));
-
-    // Hatch Cover
-    const hatchCoverConfig = {
-        name: 'Hatch',
-        unique_id: 'scoop_hatch_cover',
-        device_class: 'garage',
-        icon: 'mdi:garage',
-        command_topic: 'scoop/hatch/command',
-        state_topic: 'scoop/hatch/door',
-        value_template: '{{ value_json.state }}',
-        device: device,
-        json_attributes_topic: 'scoop/hatch/door',
-        json_attributes_template: '{{ value_json | tojson }}',
-        availability_topic: 'scoop/status',
-        payload_available: 'online',
-        payload_not_available: 'offline',
-        payload_open: '{"action": "close"}',
-        payload_close: '{"action": "open"}',
-        state_open: 'ON',
-        state_closed: 'OFF',
-        optimistic: false,
-        retain: true
-    };
-    publish(`${discoveryPrefix}/cover/scoop_hatch_cover/config`, JSON.stringify(hatchCoverConfig));
 
     // Publish initial availability
     publish('scoop/status', 'online');
