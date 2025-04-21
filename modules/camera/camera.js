@@ -211,6 +211,24 @@ takePhoto = (nightVision = false) => {
           camera.takeUntil = camera.lastRequest.clone();
           camera.takeUntil.add(camera.autoTakeMin,'minutes');
         }
+      })
+      .catch((error) => {
+        // Handle camera errors
+        camera.busy = false;
+        logging.add(`Failed to take photo: ${error.message}`, 'error');
+        
+        // Ensure night vision is turned off on error
+        if(nightVision) {
+          gpioRelais.setNightVision(false);
+        }
+        
+        // If this was a queued request, keep it queued for retry
+        if(camera.queued || camera.ir.queued || camera.telegramQueue) {
+          logging.add("Keeping photo request in queue for retry", 'warn');
+        } else {
+          camera.queued = false;
+          camera.ir.queued = false;
+        }
       });
       return true;
     }
