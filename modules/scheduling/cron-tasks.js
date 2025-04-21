@@ -193,12 +193,20 @@ const setupCronjobs = () => {
                 logging.add("Cronjob Run - Ding dong Cronjob Fired!! - " + newJob.action + " @ " + newJob.time);
 
                 if(newJob.action === "open") {
+                    if (!klappenModul.initialisiert) {
+                        logging.add("Cannot open hatch: Hatch not initialized", "warn");
+                        return;
+                    }
                     action = klappenModul.klappeFahren("hoch",null,false);
                     if(action.success != true) {
                         logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", "warn");
                     }
                 }
                 else if(newJob.action === "close") {
+                    if (!klappenModul.initialisiert) {
+                        logging.add("Cannot close hatch: Hatch not initialized", "warn");
+                        return;
+                    }
                     action = klappenModul.klappeFahren("runter",null,false);
                     if(action.success != true) {
                         logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", "warn");

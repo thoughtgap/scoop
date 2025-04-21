@@ -50,12 +50,22 @@ const init = () => {
 
     fs.readFile('klappenPosition.json', (err, data) => {
         if (err) {
-            logging.add("Could not write klappenPosition.json "+err,"warn");
+            logging.add("Could not read klappenPosition.json "+err,"warn");
+            // Set position to null to indicate unknown state
+            setKlappenPosition(null);
+            setKlappenStatus("angehalten", null);
             return false;
         }
 
         try {
             const position = JSON.parse(data);
+            if (position !== "oben" && position !== "unten") {
+                logging.add("Invalid position in klappenPosition.json: " + position, "warn");
+                // Set position to null to indicate unknown state
+                setKlappenPosition(null);
+                setKlappenStatus("angehalten", null);
+                return false;
+            }
             this.kalibriere(position);
             logging.add("Read klappenPosition.json --> "+data);
             
@@ -63,44 +73,15 @@ const init = () => {
             setKlappenPosition(position);
             setKlappenStatus("angehalten", null);
         } catch(e) {
-            logging.add(e); // error in the above string (in this case, yes)!
+            logging.add("Error parsing klappenPosition.json: " + e, "warn");
+            // Set position to null to indicate unknown state
+            setKlappenPosition(null);
+            setKlappenStatus("angehalten", null);
+            return false;
         }
     });
 
-    // // Die manuelle Initialposition ist immer wichtiger als die automatische
-    // if (initialPositionManuell !== null) {
-    //     initialPosition = initialPositionManuell;
-    //     logging.add(`Initialposition: ${initialPosition} - aus manueller Angabe übernommen.`);
-    //     logging.add("Erfolgreich initalisiert.");
-    //     return true;
-    // }
-
-    // // Ableitung der Initialposition aus den aktuellen Sensorständen
-    // let posWahrscheinlich = [];
-    // if (config.sensorObenMontiert && sensorObenWert() == "gedrückt") {
-    //     // Die Position ist wahrscheinlich oben
-    //     posWahrscheinlich.push("oben");
-    // }
-    // if (config.sensorUntenMontiert && sensorUntenWert() == "gedrückt") {
-    //     // Die Position ist wahrscheinlich unten
-    //     posWahrscheinlich.push("unten");
-    // }
-
-    // if (posWahrscheinlich.length == 1) {
-    //     // Es gibt nur eine Möglichkeit, die Initialposition ist hiermit klar.
-    //     initialPosition = posWahrscheinlich[0];
-
-    //     logging.add(`Initialposition: ${initialPosition}`);
-
-    //     setKlappenStatus("angehalten", null);
-    //     logging.add("Initialisierung erfolgreich");
-    //     return true;
-    // }
-    // else {
-        // Kann keine mögliche Position ableiten, braucht manuellen Input.
-        logging.add("Konnte keine Initialposition ermitteln. Brauche manuellen Input.");
-        return false;
-    // }
+    return true;
 };
 
 const setKlappenStatus = (status, fahrDauer) => {
