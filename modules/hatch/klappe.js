@@ -15,6 +15,7 @@ var klappe = {
     position: null,
     positionNum: null,
     zeit: null,
+    isInitializing: true  // Add initialization flag
 }
 
 var initialisiert = false;
@@ -47,6 +48,7 @@ const configure = (
 
 const init = () => {
     logging.add('Initializing hatch 🐔 pok', 'info');
+    klappe.isInitializing = true;  // Set initialization flag
 
     fs.readFile('klappenPosition.json', (err, data) => {
         if (err) {
@@ -54,6 +56,7 @@ const init = () => {
             // Set position to null to indicate unknown state
             setKlappenPosition(null);
             setKlappenStatus("angehalten", null);
+            klappe.isInitializing = false;  // Clear initialization flag
             return false;
         }
 
@@ -64,6 +67,7 @@ const init = () => {
                 // Set position to null to indicate unknown state
                 setKlappenPosition(null);
                 setKlappenStatus("angehalten", null);
+                klappe.isInitializing = false;  // Clear initialization flag
                 return false;
             }
             this.kalibriere(position);
@@ -72,11 +76,13 @@ const init = () => {
             // Send initial position and status events
             setKlappenPosition(position);
             setKlappenStatus("angehalten", null);
+            klappe.isInitializing = false;  // Clear initialization flag
         } catch(e) {
             logging.add("Error parsing klappenPosition.json: " + e, "warn");
             // Set position to null to indicate unknown state
             setKlappenPosition(null);
             setKlappenStatus("angehalten", null);
+            klappe.isInitializing = false;  // Clear initialization flag
             return false;
         }
     });
@@ -112,15 +118,18 @@ const setKlappenPosition = (obenUnten) => {
     klappe.position = obenUnten;
     events.send('klappenPosition',obenUnten);
 
-    // Write to file
-    fs.writeFile("klappenPosition.json", JSON.stringify(klappe.position), 'utf8', function (err) {
-        if (err) {
-            logging.add("Could not write klappenPosition.json "+err,"warn");
-            return false;
-        }
-        logging.add("Wrote klappenPosition.json");
-    });
-
+    // Only write to file if not in initialization phase
+    if (!klappe.isInitializing) {
+        fs.writeFile("klappenPosition.json", JSON.stringify(klappe.position), 'utf8', function (err) {
+            if (err) {
+                logging.add("Could not write klappenPosition.json "+err,"warn");
+                return false;
+            }
+            logging.add("Wrote klappenPosition.json");
+        });
+    } else {
+        logging.add("Skipped writing klappenPosition.json during initialization", "debug");
+    }
 
     heating.checkLight();
 }
@@ -282,12 +291,12 @@ kalibriere = (obenUnten) => {
         return { success: false, message: "Bitte Position (oben/unten) korrekt angeben" };
     }
     setKlappenPosition(obenUnten);
-    klappe.positionNum = (obenUnten == "oben" ? 1 : 0) * config.ganzeFahrtSek;
+    klappe.positionNum = (obenUnten == "oben" ? config.ganzeFahrtSek : 0);
     klappe.hochSek = 0;
     klappe.runterSek = 0;
     setKlappenStatus("angehalten", null);
     initialisiert = true;
-    let message = `Position ${klappe.position} kalibriert.`;
+    let message = `Position ${klappe.position} kalibriert. PositionNum: ${klappe.positionNum}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}`;
     logging.add(message);
     return { success: true, message: message };
 }
