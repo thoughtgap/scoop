@@ -259,7 +259,10 @@ app.use(compression());
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-
+  // Add security headers for HTTPS
+  res.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.header("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://ajax.googleapis.com; img-src 'self' data: blob:;");
+  
   logging.add(`req ${req.method} ${req.originalUrl} from ${( req.headers['x-forwarded-for'] || req.connection.remoteAddress )}`, 'debug');
   next();
 });
@@ -270,8 +273,15 @@ app.get('/', function (req, res) {
   res.redirect('/frontend/index.html');
 });
 
-// Deliver frontend
-app.use('/frontend', express.static(__dirname + '/frontend'));
+// Deliver frontend with proper caching headers
+app.use('/frontend', express.static(__dirname + '/frontend', {
+  maxAge: '1d',
+  setHeaders: function(res, path) {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 app.get('/status', function (req, res) {
   res.send({
