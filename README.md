@@ -20,6 +20,10 @@ This is our **smart chicken coop** server. It is providing a web-based backend a
     - [Coop Event Stream](#coop-event-stream)
     - [Shelly Integration](#shelly-integration)
     - [Heating / Light](#heating--light)
+  - [MQTT Integration](#mqtt-integration)
+    - [Configuration](#configuration)
+    - [Published Topics](#published-topics)
+    - [Home Assistant Auto-Discovery](#home-assistant-auto-discovery)
 
 ## Screenshot
 ![Screenshot of Frontend](https://github.com/thoughtgap/scoop/blob/master/docs/scoop-screenshot.png?raw=true)
@@ -216,3 +220,48 @@ In case the Shelly app/web interface is used, shelly also informs the coop if it
 ### Heating / Light
 * `/heating/enable` turns the lighting logic on. beware, light turns on only if all defined preconditions (time-frame, door state, cold temps) are met.
 * `/heating/disable` turns it off.
+
+## MQTT Integration
+
+Scoop can publish sensor data and status information to an MQTT broker, allowing integration with home automation systems like Home Assistant.
+
+### Configuration
+
+Configure MQTT in the `config.json` file:
+
+```json
+"mqtt": {
+  "broker": "mqtt://iobroker",   // MQTT broker URL
+  "username": null,              // Optional broker username
+  "password": null,              // Optional broker password
+  "discovery": true,             // Enable Home Assistant auto-discovery
+  "discoveryPrefix": "homeassistant"  // Discovery prefix (default: homeassistant)
+}
+```
+
+### Published Topics
+
+Scoop publishes the following MQTT topics:
+
+| Topic | Description | Format |
+|-------|-------------|--------|
+| `scoop/temperature` | Coop temperature | JSON with `value` and `timestamp` |
+| `scoop/humidity` | Coop humidity | JSON with `value` and `timestamp` |
+| `scoop/cpu_temperature` | Raspberry Pi CPU temperature | JSON with `value` and `timestamp` |
+| `scoop/hatch/door` | Hatch door state (open/closed) | JSON with `state` and `position` |
+| `scoop/hatch/movement` | Hatch movement state | JSON with `state` and `status` |
+| `scoop/status` | System availability | String: `online` or `offline` |
+
+### Home Assistant Auto-Discovery
+
+When `mqtt.discovery` is enabled, Scoop automatically configures the following entities in Home Assistant:
+
+- Temperature sensor
+- Humidity sensor
+- CPU Temperature sensor
+- Hatch Door binary sensor
+- Hatch Movement binary sensor
+
+All entities are grouped under a single "Scoop" device in Home Assistant, making management easier.
+
+The auto-discovery feature uses the MQTT discovery protocol to dynamically register these entities without requiring manual configuration in Home Assistant.
