@@ -9,7 +9,7 @@ let initialized = false;
 
 const connect = () => {
     if (!config.mqtt || !config.mqtt.broker) {
-        logging.add('MQTT broker not configured', 'warn','mqtt');
+        logging.add('MQTT broker not configured in config.json', 'warn','mqtt');
         return;
     }
 

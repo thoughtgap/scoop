@@ -197,7 +197,6 @@ readBME280 = () => {
             }
 
             // Send values to heating.js
-            //heating.checkHeating(status.values.temperature,status.hourAgo.temperature);
             heating.checkLight(status.values.temperature);
 
             if(status.intervalSec) {
