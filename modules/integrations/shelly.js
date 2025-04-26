@@ -18,7 +18,7 @@ var config = {
 }
 
 const configure = (url, intervalSec) => {
-    logging.add(`Shelly configure ${url}`);
+    logging.add(`Shelly configure ${url}`, 'info', 'shelly');
     config.url = url;
     status.intervalSec = intervalSec;
 }
@@ -27,7 +27,7 @@ getShellyStatus = (noRepeat = false) => {
     // Make the function return a promise but don't require callers to use await
     const promise = (async () => {
         if (!status.busy && config.url !== null) {
-            logging.add("Shelly getShellyStatus() getting relay data");
+            logging.add("Shelly getShellyStatus() getting relay data", 'info', 'shelly');
             status.busy = true;
 
             try {
@@ -41,7 +41,7 @@ getShellyStatus = (noRepeat = false) => {
                 }
                 
                 if(status.intervalSec && !noRepeat) {
-                    logging.add("Shelly next value in "+status.intervalSec, 'debug');
+                    logging.add("Shelly next value in "+status.intervalSec, 'debug', "shelly");
                     setTimeout(function erneutLesen() {
                         getShellyStatus();
                     }, status.intervalSec * 1000);
@@ -52,7 +52,7 @@ getShellyStatus = (noRepeat = false) => {
                 logging.add(error.message, 'warn');
                 
                 if(status.intervalSec && !noRepeat) {
-                    logging.add("Shelly next value in "+status.intervalSec, 'debug');
+                    logging.add("Shelly next value in "+status.intervalSec, 'debug', 'shelly');
                     setTimeout(function erneutLesen() {
                         getShellyStatus();
                     }, status.intervalSec * 1000);
@@ -68,7 +68,7 @@ getShellyStatus = (noRepeat = false) => {
     
     // Handle errors silently to maintain backward compatibility
     promise.catch(err => {
-        logging.add(`Error in getShellyStatus: ${err.message}`, 'error');
+        logging.add(`Error in getShellyStatus: ${err.message}`, 'error', 'shelly');
     });
     
     return promise;
@@ -83,7 +83,7 @@ const turnShellyRelay = (onOff, retryCount = null) => {
             return false;
         }
         else if (config.url !== null && (onOff == 'on' || onOff == 'off')) {
-            //logging.add(`Shelly turnShellyRelay(${onOff})`);
+            //logging.add(`Shelly turnShellyRelay(${onOff})`, 'info', 'shelly');
 
             const rpcCommand = onOff === 'on' ? 'true' : 'false';
             
@@ -100,13 +100,13 @@ const turnShellyRelay = (onOff, retryCount = null) => {
                 }
                 return false;
             } catch (error) {
-                logging.add(error.message, 'warn');
+                logging.add(error.message, 'warn', 'shelly');
 
                 // Try again if failed
                 if(retryCount === null) {
                     retryCount = 0;
                 }
-                logging.add("Shelly turnShellyRelay() - failed - try again in 2s");
+                logging.add("Shelly turnShellyRelay() - failed - try again in 2s", 'warn', 'shelly');
                 setTimeout(() => {
                     turnShellyRelay(onOff, (retryCount + 1));
                 }, 2000);
@@ -115,14 +115,14 @@ const turnShellyRelay = (onOff, retryCount = null) => {
             }
         }
         else {
-            logging.add("Shelly turnShellyRelay() - invalid config or command (skip)");
+            logging.add("Shelly turnShellyRelay() - invalid config or command (skip)", 'warn', 'shelly');
             return false;
         }
     })();
     
     // Handle errors silently to maintain backward compatibility
     promise.catch(err => {
-        logging.add(`Error in turnShellyRelay: ${err.message}`, 'error');
+        logging.add(`Error in turnShellyRelay: ${err.message}`, 'error', 'shelly');
     });
     
     return promise;
@@ -131,11 +131,11 @@ const turnShellyRelay = (onOff, retryCount = null) => {
 // Shelly IO URL Actions will push the Relay State (on/off) to the coop, no need to poll regularly
 setShellyRelayStatusOnOff = (onOff) => {
     if(onOff == 'on' || onOff == 'off') {
-        logging.add(`Shelly receiving setShellyRelayStatusOnOff(${onOff})`);
+        logging.add(`Shelly receiving setShellyRelayStatusOnOff(${onOff})`, 'info', 'shelly');
         setShellyRelayStatus(onOffToBool(onOff), 'setShellyRelayStatusOnOff');
     }
     else {
-        logging.add(`Shelly receiving invalid setShellyRelayStatusOnOff(on,off)`);
+        logging.add(`Shelly receiving invalid setShellyRelayStatusOnOff(on,off)`, 'warn', 'shelly');
     }
 }
 

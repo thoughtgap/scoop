@@ -8,7 +8,7 @@ let messageQueue = [];
 
 const connect = () => {
     if (!config.mqtt || !config.mqtt.broker) {
-        logging.add('MQTT broker not configured', 'warn');
+        logging.add('MQTT broker not configured', 'warn','mqtt');
         return;
     }
 
@@ -24,18 +24,18 @@ const connect = () => {
     client = mqtt.connect(config.mqtt.broker, options);
 
     client.on('connect', () => {
-        logging.add('Connected to MQTT broker', 'info');
+        logging.add('Connected to MQTT broker', 'info', 'mqtt');
         setupHomeAssistantDiscovery();
         // Process any queued messages
         processMessageQueue();
     });
 
     client.on('error', (error) => {
-        logging.add(`MQTT error: ${error}`, 'error');
+        logging.add(`MQTT error: ${error}`, 'error', 'mqtt');
     });
 
     client.on('close', () => {
-        logging.add('MQTT connection closed', 'warn');
+        logging.add('MQTT connection closed', 'warn', 'mqtt');
     });
 };
 
@@ -44,7 +44,7 @@ const processMessageQueue = () => {
     
     const queueLength = messageQueue.length;
     if (queueLength > 0) {
-        logging.add(`Processing MQTT message queue (${queueLength} messages)`, 'info');
+        logging.add(`Processing MQTT message queue (${queueLength} messages)`, 'info', 'mqtt');
     }
     
     while (messageQueue.length > 0) {
@@ -163,13 +163,13 @@ const publish = (topic, message) => {
     if (!client || !client.connected) {
         // Queue the message if MQTT is not ready
         messageQueue.push({ topic, message });
-        logging.add(`MQTT message queued (queue length: ${messageQueue.length})`, 'debug');
+        logging.add(`MQTT message queued (queue length: ${messageQueue.length})`, 'debug', 'mqtt');
         return;
     }
 
     client.publish(topic, message.toString(), { retain: true }, (err) => {
         if (err) {
-            logging.add(`MQTT publish error: ${err}`, 'error');
+            logging.add(`MQTT publish error: ${err}`, 'error', 'mqtt');
         }
     });
 };

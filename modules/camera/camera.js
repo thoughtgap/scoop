@@ -80,11 +80,11 @@ queueTelegram = () => {
   const isDark = suncalcHelper.isDark();
 
   if(isDark) {
-    logging.add("Telegram photo with IR","info");
+    logging.add("Telegram photo with IR","info", 'camera');
     camera.ir.queued = true;
   }
   else {
-    logging.add("Telegram photo without IR","info",'camera');
+    logging.add("Telegram photo without IR","info", 'camera');
   }
 }
 

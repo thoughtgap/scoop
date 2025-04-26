@@ -13,7 +13,7 @@ class GpioWrapper {
 
     writeSync(value) {
         gpioControl.setPin(this.pin, value === 1 ? 'high' : 'low').catch(err => {
-            logging.add(`Error writing to pin ${this.pin}: ${err.message}`, 'error');
+            logging.add(`Error writing to pin ${this.pin}: ${err.message}`, 'error', 'gpio-control');
         });
     }
 
@@ -21,7 +21,7 @@ class GpioWrapper {
         return gpioControl.getPin(this.pin).then(state => {
             return state === 'high' ? 1 : 0;
         }).catch(err => {
-            logging.add(`Error reading pin ${this.pin}: ${err.message}`, 'error');
+            logging.add(`Error reading pin ${this.pin}: ${err.message}`, 'error', 'gpio-control');
             return 0;
         });
     }
@@ -37,7 +37,7 @@ class GpioControl {
     async configure(skipGpio = false) {
         this.skipGpio = skipGpio;
         if (skipGpio) {
-            logging.add("Skipping real GPIO init due to skipGpio");
+            logging.add("Skipping real GPIO init due to skipGpio", 'info', 'gpio-control');
             return;
         }
 
@@ -45,9 +45,9 @@ class GpioControl {
             // Test if pinctrl is available
             await execAsync('which pinctrl');
             this.initialized = true;
-            logging.add("GPIO control initialized successfully");
+            logging.add("GPIO control initialized successfully", 'info', 'gpio-control');
         } catch (error) {
-            logging.add("Error initializing GPIO control: " + error.message, 'error');
+            logging.add(`Error initializing GPIO control: ${error.message}`, 'error', 'gpio-control');
             throw error;
         }
     }
@@ -65,16 +65,16 @@ class GpioControl {
             
             // Update pin cache
             this.pins.set(pin, { mode, state: null });
-            logging.add(`GPIO ${pin} configured as ${mode}`);
+            logging.add(`GPIO ${pin} configured as ${mode}`, 'info', 'gpio-control');
         } catch (error) {
-            logging.add(`Error configuring GPIO pin ${pin}: ${error.message}`, 'error');
+            logging.add(`Error configuring GPIO pin ${pin}: ${error.message}`, 'error', 'gpio-control');
             throw error;
         }
     }
 
     async setPin(pin, state) {
         if (this.skipGpio) {
-            logging.add(`Skipping GPIO operation: pin ${pin} would be set to ${state}`);
+            logging.add(`Skipping GPIO operation: pin ${pin} would be set to ${state}`, 'info', 'gpio-control');
             return;
         }
 
@@ -94,16 +94,16 @@ class GpioControl {
             // Update pin cache
             const pinConfig = this.pins.get(pin);
             pinConfig.state = state;
-            logging.add(`GPIO ${pin} set to ${state}`);
+            logging.add(`GPIO ${pin} set to ${state}`, 'debug', 'gpio-control');
         } catch (error) {
-            logging.add(`Error setting GPIO pin ${pin}: ${error.message}`, 'error');
+            logging.add(`Error setting GPIO pin ${pin}: ${error.message}`, 'error', 'gpio-control');
             throw error;
         }
     }
 
     async getPin(pin) {
         if (this.skipGpio) {
-            logging.add(`Skipping GPIO operation: would read pin ${pin}`);
+            logging.add(`Skipping GPIO operation: would read pin ${pin}`, 'info', 'gpio-control');
             return 'unknown';
         }
 
@@ -120,10 +120,10 @@ class GpioControl {
             
             // Update pin cache
             this.pins.set(pin, { mode, state });
-            logging.add(`GPIO ${pin} is ${state}`);
+            logging.add(`GPIO ${pin} is ${state}`, 'info', 'gpio-control');
             return state;
         } catch (error) {
-            logging.add(`Error reading GPIO pin ${pin}: ${error.message}`, 'error');
+            logging.add(`Error reading GPIO pin ${pin}: ${error.message}`, 'error', 'gpio-control');
             throw error;
         }
     }

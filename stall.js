@@ -58,13 +58,13 @@ telegram.configure(config.telegram.sendMessages,
 
 // CPU Temperature Init
 if(!skipGpio.cpuTemp) {
-  logging.add("Initializing CPU Temperature Sensor");
+  logging.add("Initializing CPU Temperature Sensor", 'info', 'stall');
   var cpuTemp = require('./modules/temperature/cpu.js');
   cpuTemp.configure(config.intervals.cpu);
   cpuTemp.readSensor();
 }
 else {
-  logging.add("Skipping CPU Temperature Sensor");
+  logging.add("Skipping CPU Temperature Sensor", 'info', 'stall');
 }
 
 // Hatch Init
@@ -79,7 +79,7 @@ klappenModul.configure(
 );
 
 klappenModul.stoppeKlappe();
-logging.add("Motor initialisiert");//klappenModul.stoppeKlappe();
+logging.add("Motor initialisiert", 'info', 'stall');//klappenModul.stoppeKlappe();
 klappenModul.init();
 
 /*
@@ -247,7 +247,7 @@ app.use(function(req, res, next) {
   res.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   res.header("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://ajax.googleapis.com; img-src 'self' data: blob:;");
   
-  logging.add(`req ${req.method} ${req.originalUrl} from ${( req.headers['x-forwarded-for'] || req.connection.remoteAddress )}`, 'debug');
+  logging.add(`req ${req.method} ${req.originalUrl} from ${( req.headers['x-forwarded-for'] || req.connection.remoteAddress )}`, 'debug', 'stall');
   next();
 });
 
@@ -444,5 +444,5 @@ app.get('/light/disable', function (req, res) {
 app.get('/events', events.sse.init);
 
 app.listen(3000, function () {
-  logging.add('listening on port 3000!');
+  logging.add('listening on port 3000!', 'info', 'stall');
 });
