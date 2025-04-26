@@ -40,14 +40,14 @@ gpioRelais.configure( config.gpioPorts.out.hoch,
 
 // BME280 Init
 if(!skipGpio.bme280) {
-  logging.add("Initializing BME280 Temperature Sensor");
+  logging.add("Initializing BME280 Temperature Sensor", 'info', 'stall');
   var bme280 = require('./modules/temperature/bme280.js');
   bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
-  logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`);
+  logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`, 'info', 'stall');
   bme280.readBME280();
 }
 else {
-  logging.add("Skipping BME280 Temperature Sensor");
+  logging.add("Skipping BME280 Temperature Sensor", 'info', 'stall');
 }
 
 // Telegram Init
@@ -79,7 +79,7 @@ klappenModul.configure(
 );
 
 klappenModul.stoppeKlappe();
-logging.add("Motor initialisiert");
+logging.add("Motor initialisiert");//klappenModul.stoppeKlappe();
 klappenModul.init();
 
 /*

@@ -57,7 +57,7 @@ configure = (intervalSec, maxAgeSec, autoTakeMin) => {
     
     logging.add("Camera Configure: "+
         "  intervalSec " + camera.intervalSec + 
-        "  autoTakeMin " + camera.autoTakeMin
+        "  autoTakeMin " + camera.autoTakeMin, 'info', 'camera'
     );
 
     gpioRelais.setNightVision(false);
@@ -84,7 +84,7 @@ queueTelegram = () => {
     camera.ir.queued = true;
   }
   else {
-    logging.add("Telegram photo without IR","info");
+    logging.add("Telegram photo without IR","info",'camera');
   }
 }
 
@@ -99,7 +99,7 @@ checkCamera = () => {
     camera.queued = true;
   }
   
-  logging.add("Queues Photo "+ (camera.queued ? 'Y' : 'N') + "   Nightvision "+ (camera.ir.queued ? 'Y' : 'N') + "  Telegram    "+ (camera.telegramQueue ? 'Y' : 'N'),"debug");
+  logging.add("Queued Photo "+ (camera.queued ? 'Y' : 'N') + "   Nightvision "+ (camera.ir.queued ? 'Y' : 'N') + "  Telegram    "+ (camera.telegramQueue ? 'Y' : 'N'),"debug", 'camera');
 
   if(camera.queued || camera.ir.queued || camera.telegramQueue) {
     photoStatus = this.takePhoto();
@@ -126,24 +126,24 @@ takePhoto = (nightVision = false) => {
 
     // Is it really necessary to take another picture?
     if(now <= camera.earliestTimeNextPhoto /* && !nightVision*/) {
-      logging.add("Not taking picture. Picture still good.","debug");
+      logging.add("Not taking picture. Picture still good.","debug", 'camera');
       return false;
       // TODO return "picture still good";
     }
     else if(camera.busy) {
-      logging.add("Not taking picture. Camera busy.","debug");
+      logging.add("Not taking picture. Camera busy.","debug", 'camera');
       return false;
       // TODO return "camera busy";
     }
     else {
-      logging.add("Taking picture","debug");
+      logging.add("Taking picture","debug", 'camera');
 
       if(nightVision && !gpioRelais.setNightVision(true)) {
-        logging.add(`Could not turn on Night Vision`, 'warn');
+        logging.add(`Could not turn on Night Vision`, 'warn', 'camera');
       }
 
       camera.busy = true;
-      logging.add("Taking a"+ (nightVision ? " night vision" : "") +" picture","debug");
+      logging.add("Taking a"+ (nightVision ? " night vision" : "") +" picture","debug", 'camera');
       let takingPicture = moment();
 
       cam.takePhoto().then((photo) => {
@@ -165,7 +165,7 @@ takePhoto = (nightVision = false) => {
         
         // Turn off Infrared LEDs again
         if(nightVision && !gpioRelais.setNightVision(false)) {
-          logging.add("Error when turning night vision off","warn");
+          logging.add("Error when turning night vision off","warn", 'camera');
         }
 
         // Send picture via Telegram
@@ -188,7 +188,7 @@ takePhoto = (nightVision = false) => {
         let tookPicture = moment();
         let duration = tookPicture.diff(takingPicture);
         cameraTimeStats.push(duration);
-        logging.add(`Took a ${nightVision ? "night vision " : ""}picture - ${duration} ms`);
+        logging.add(`Took a ${nightVision ? "night vision " : ""}picture - ${duration} ms`, 'info', 'camera');
 
         // Calculate statistics of the recordings
         camera.statistics.avg = Math.round(cameraTimeStats.reduce((a,b) => (a+b)) / cameraTimeStats.length / 100) / 10;
@@ -197,13 +197,13 @@ takePhoto = (nightVision = false) => {
         camera.statistics.pics = cameraTimeStats.length;
         // Only periodically log the camera statistics
         if(camera.statistics.pics == 1 || camera.statistics.pics%100 == 0) {
-          logging.add(`Camera Statistics: ${camera.statistics.pics} pics, Avg ${camera.statistics.avg}s, Min ${camera.statistics.min}s, Max ${camera.statistics.max}s`);
+          logging.add(`Camera Statistics: ${camera.statistics.pics} pics, Avg ${camera.statistics.avg}s, Min ${camera.statistics.min}s, Max ${camera.statistics.max}s`, 'info', 'camera');
         }
 
         // Purge Camera Statistics if the record gets too large
         cameraStatisticsTreshold = 5000;
         if(cameraTimeStats.length > cameraStatisticsTreshold) {
-          logging.add(`Camera Statistics: Purging (${cameraStatisticsTreshold} elements treshold reached after ${moment().diff(cameraTimeStatsSince,'days')} days)`);
+          logging.add(`Camera Statistics: Purging (${cameraStatisticsTreshold} elements treshold reached after ${moment().diff(cameraTimeStatsSince,'days')} days)`, 'info', 'camera');
           cameraTimeStats = [];
         }
 
@@ -216,7 +216,7 @@ takePhoto = (nightVision = false) => {
       .catch((error) => {
         // Handle camera errors
         camera.busy = false;
-        logging.add(`Failed to take photo: ${error.message}`, 'error');
+        logging.add(`Failed to take photo: ${error.message}`, 'error', 'camera');
         
         // Ensure night vision is turned off on error
         if(nightVision) {
@@ -225,7 +225,7 @@ takePhoto = (nightVision = false) => {
         
         // If this was a queued request, keep it queued for retry
         if(camera.queued || camera.ir.queued || camera.telegramQueue) {
-          logging.add("Keeping photo request in queue for retry", 'warn');
+          logging.add("Keeping photo request in queue for retry", 'warn', 'camera');
         } else {
           camera.queued = false;
           camera.ir.queued = false;

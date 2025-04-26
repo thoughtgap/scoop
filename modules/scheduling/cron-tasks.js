@@ -42,7 +42,7 @@ cronTelegrams = cronTelegrams.filter((value, index) => {
     return cronTelegrams.indexOf(value) === index;
 });
 
-logging.add("Schedules Crons for Telegram Pictures: " + cronTelegrams.toString());
+logging.add("Scheduled Crons for Telegram Pictures: " + cronTelegrams.toString(), 'info', 'cron-tasks');
 
 
 const cronConfig = {
@@ -76,17 +76,17 @@ configure = (location, hatchAutomation, lightConfigObj) => {
         cronConfig.lightConditions = lightConfigObj.conditions;
         
         cronConfig.lightConditions.forEach(light => {
-            logging.add("Cronjob Configure Light between    " + light.from + " and " + light.to);
+            logging.add("Cronjob Configure Light between    " + light.from + " and " + light.to, 'info', 'cron-tasks');
         });
     }
     else {
         cronConfig.lightConfigObj = [];
     }
 
-    logging.add("Cronjob Configure Location " + cronConfig.location.lat + "," + cronConfig.location.lon);
-    logging.add("Cronjob Configure Hatch openTimes " + cronConfig.hatchAutomation.openTimes.toString());
-    logging.add("Cronjob Configure Hatch closeTimes " + cronConfig.hatchAutomation.closeTimes.toString());
-    logging.add("Cronjob Configure Heat between     " + cronConfig.heatingTimeFrame.from + " and " + cronConfig.heatingTimeFrame.to);
+    logging.add("Cronjob Configure Location " + cronConfig.location.lat + "," + cronConfig.location.lon, 'info', 'cron-tasks');
+    logging.add("Cronjob Configure Hatch openTimes " + cronConfig.hatchAutomation.openTimes.toString(), 'info', 'cron-tasks');
+    logging.add("Cronjob Configure Hatch closeTimes " + cronConfig.hatchAutomation.closeTimes.toString(), 'info', 'cron-tasks');
+    logging.add("Cronjob Configure Heat between     " + cronConfig.heatingTimeFrame.from + " and " + cronConfig.heatingTimeFrame.to, 'info', 'cron-tasks');
 
     setupCronjobs();
 };
@@ -97,7 +97,7 @@ coopCronjobs = [];
 var schedulerCronjob = new CronJob('0 1 0 * * *', function() {
     // This Job will run at 00:01 every night and reschedule all cronjobs.
     // This is necessary to keep sunrise/-set based cronjobs up to date.
-    logging.add("Cronjobs: Nightly rescheduling");
+    logging.add("Cronjobs: Nightly rescheduling", 'info', 'cron-tasks');
     setupCronjobs();
  },null);
  schedulerCronjob.start();
@@ -113,7 +113,7 @@ const setupCronjobs = () => {
     
     // Properly unregister/stop the previous cronjobs
     if(coopCronjobs.length > 0) {
-        logging.add(`Cronjobs: Unregistering ${coopCronjobs.length} old Cronjobs`);
+        logging.add(`Cronjobs: Unregistering ${coopCronjobs.length} old Cronjobs`, 'info', 'cron-tasks');
         coopCronjobs.forEach(cronjob => {
             cronjob.stop();
             cronjob = null;
@@ -121,7 +121,7 @@ const setupCronjobs = () => {
         coopCronjobs = [];
     }
 
-    logging.add("Cronjobs: Set up Setup Cronjobs");
+    logging.add("Cronjobs: Set up Setup Cronjobs", 'info', 'cron-tasks');
     let cronjobsToConfigure = [];
 
     cronConfig.hatchAutomation.openTimes.forEach(openingTime => {
@@ -175,7 +175,7 @@ const setupCronjobs = () => {
                                │ │    └─────────── Hours: 0-23
                                │ └──────────────── Minutes: 0-59
                                └────────────────── Seconds: 0-59 */
-            logging.add("Cronjob Scheduling " + cronPattern.padEnd(15) + newJob.action.padEnd(13) + " " + (realTime.h<10 ? '0' : '') +realTime.h + ":" + (realTime.m<10 ? '0' : '') + realTime.m + " " + newJob.time);
+            logging.add("Cronjob Scheduling " + cronPattern.padEnd(15) + newJob.action.padEnd(13) + " " + (realTime.h<10 ? '0' : '') +realTime.h + ":" + (realTime.m<10 ? '0' : '') + realTime.m + " " + newJob.time, 'info', 'cron-tasks');
             
             cronStatus.jobs.push({
                 //cronPattern: cronPattern,
@@ -190,26 +190,26 @@ const setupCronjobs = () => {
             // Push the Actual Cronjob and include the coding to be executed
             coopCronjobs.push(new CronJob(cronPattern, function () {
                 
-                logging.add("Cronjob Run - Ding dong Cronjob Fired!! - " + newJob.action + " @ " + newJob.time);
+                logging.add("Cronjob Run - Ding dong Cronjob Fired!! - " + newJob.action + " @ " + newJob.time, 'info', 'cron-tasks');
 
                 if(newJob.action === "open") {
                     if (!klappenModul.initialisiert) {
-                        logging.add("Cannot open hatch: Hatch not initialized", "warn");
+                        logging.add("Cannot open hatch: Hatch not initialized", "warn", 'cron-tasks');
                         return;
                     }
                     action = klappenModul.klappeFahren("hoch",null,false);
                     if(action.success != true) {
-                        logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", "warn");
+                        logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", "warn", 'cron-tasks');
                     }
                 }
                 else if(newJob.action === "close") {
                     if (!klappenModul.initialisiert) {
-                        logging.add("Cannot close hatch: Hatch not initialized", "warn");
+                        logging.add("Cannot close hatch: Hatch not initialized", "warn", 'cron-tasks');
                         return;
                     }
                     action = klappenModul.klappeFahren("runter",null,false);
                     if(action.success != true) {
-                        logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", "warn");
+                        logging.add("Cronjob Run "+newJob.action+" - Unsuccessful.", "warn", 'cron-tasks');
                     }
                 }
                 else if(newJob.action === "checkLight") {
@@ -219,14 +219,14 @@ const setupCronjobs = () => {
             }, null, true));
         }
         else {
-            logging.add("Cronjob Setup failed: " + newJob.action + " " + newJob.time + " INVALID CRON PATTERN","warn");
+            logging.add("Cronjob Setup failed: " + newJob.action + " " + newJob.time + " INVALID CRON PATTERN","warn", 'cron-tasks');
         }
     });
 
     // Create custom cronjob which sends a telegram picture every hour
     cronTelegrams.forEach(cronTelegram => {
         coopCronjobs.push(new CronJob(cronTelegram, function () {
-            logging.add("Cronjob Run - Ding dong Custom Telegram Cronjob fired!","info");
+            logging.add("Cronjob Run - Ding dong Custom Telegram Cronjob fired!","info", 'cron-tasks');
             camera.queueTelegram();
         }, null, true));
     })

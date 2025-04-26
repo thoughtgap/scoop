@@ -12,7 +12,7 @@ configure = (sendMessages, token, chatId) => {
     telegramConfig.sendMessages = sendMessages;
     telegramConfig.token = token;
     telegramConfig.chatId = chatId;
-    logging.add(`Telegram Configured - ${telegramConfig.sendMessages ? 'enabled' : 'disabled'}`);
+    logging.add(`Telegram Configured - ${telegramConfig.sendMessages ? 'enabled' : 'disabled'}`, 'info', 'telegram');
 };
 
 /**
@@ -28,14 +28,14 @@ const sendMessages = (message) => {
             await axios.get(`https://api.telegram.org/${telegramConfig.token}/sendMessage?chat_id=${telegramConfig.chatId}&text=${encodeURIComponent(message)}`);
             return true;
         } catch (err) {
-            logging.add(`Error sending Telegram message: ${err.message}`, 'warn');
+            logging.add(`Error sending Telegram message: ${err.message}`, 'warn', 'telegram');
             return false;
         }
     })();
     
     // Handle errors silently to maintain backward compatibility
     promise.catch(err => {
-        logging.add(`Error in sendMessages: ${err.message}`, 'error');
+        logging.add(`Error in sendMessages: ${err.message}`, 'error', 'telegram');
     });
     
     return promise;
@@ -48,7 +48,7 @@ const sendMessages = (message) => {
 const sendPhoto = (photo) => {
     if (!telegramConfig.sendMessages) { return false; }
 
-    logging.add("Telegram SendPhoto", 'debug');
+    logging.add("Telegram SendPhoto", 'debug', 'telegram');
     const url = `https://api.telegram.org/${telegramConfig.token}/sendPhoto`;
     
     // Execute asynchronously but don't require await
@@ -69,17 +69,17 @@ const sendPhoto = (photo) => {
                 headers: form.getHeaders()
             });
             
-            logging.add('Telegram Upload successful!', 'debug');
+            logging.add('Telegram Upload successful!', 'debug', 'telegram');
             return true;
         } catch (err) {
-            logging.add(`Telegram Upload failed: ${err.message}`, 'warn');
+            logging.add(`Telegram Upload failed: ${err.message}`, 'warn', 'telegram');
             return false;
         }
     })();
     
     // Handle errors silently to maintain backward compatibility
     promise.catch(err => {
-        logging.add(`Error in sendPhoto: ${err.message}`, 'error');
+        logging.add(`Error in sendPhoto: ${err.message}`, 'error', 'telegram');
     });
     
     return promise;

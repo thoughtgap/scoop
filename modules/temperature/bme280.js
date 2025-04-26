@@ -52,14 +52,14 @@ var config = {
 }
 
 configure = (port, intervalSec) => {
-    logging.add(`BME280 configure Port ${port} Interval ${intervalSec}`);
+    logging.add(`BME280 configure Port ${port} Interval ${intervalSec}`, 'info', 'bme280');
     status.intervalSec = intervalSec;
     config.port = Number(port);
 }
 
 readBME280 = () => {
     if (!status.busy && config.port !== null) {
-        logging.add("BME280 readSensor() getting sensor data","debug");
+        logging.add("readSensor() getting sensor data","debug", 'bme280');
         status.busy = true;
         bme280.open({ i2cAddress: config.port }).then(async sensor => {
             status.values = await sensor.read();
@@ -67,7 +67,7 @@ readBME280 = () => {
             status.busy = false;
             let now = moment();
             status.time = now;
-            logging.add(`BME280 temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`,"debug");
+            logging.add(`temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`,"debug", 'bme280');
             logging.thingspeakLog("field1="+status.values.temperature.toFixed(2)+"&field2="+status.values.pressure.toFixed(2)+"&field3="+status.values.humidity.toFixed(2));
 
             // Send temperature and humidity events

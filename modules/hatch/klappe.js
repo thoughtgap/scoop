@@ -47,12 +47,12 @@ const configure = (
 };
 
 const init = () => {
-    logging.add('Initializing hatch 🐔 pok', 'info');
+    logging.add('Initializing hatch 🐔 pok', 'info', 'klappe');
     klappe.isInitializing = true;  // Set initialization flag
 
     fs.readFile('klappenPosition.json', (err, data) => {
         if (err) {
-            logging.add("Could not read klappenPosition.json "+err,"warn");
+            logging.add("Could not read klappenPosition.json "+err, "warn", 'klappe');
             // Set position to null to indicate unknown state
             setKlappenPosition(null);
             setKlappenStatus("angehalten", null);
@@ -63,7 +63,7 @@ const init = () => {
         try {
             const position = JSON.parse(data);
             if (position !== "oben" && position !== "unten") {
-                logging.add("Invalid position in klappenPosition.json: " + position, "warn");
+                logging.add("Invalid position in klappenPosition.json: " + position, "warn", 'klappe');
                 // Set position to null to indicate unknown state
                 setKlappenPosition(null);
                 setKlappenStatus("angehalten", null);
@@ -71,14 +71,14 @@ const init = () => {
                 return false;
             }
             this.kalibriere(position);
-            logging.add("Read klappenPosition.json --> "+data);
+            logging.add("Read klappenPosition.json --> "+data, 'info', 'klappe');
             
             // Send initial position and status events
             setKlappenPosition(position);
             setKlappenStatus("angehalten", null);
             klappe.isInitializing = false;  // Clear initialization flag
         } catch(e) {
-            logging.add("Error parsing klappenPosition.json: " + e, "warn");
+            logging.add("Error parsing klappenPosition.json: " + e, "warn", 'klappe');
             // Set position to null to indicate unknown state
             setKlappenPosition(null);
             setKlappenStatus("angehalten", null);
@@ -87,6 +87,7 @@ const init = () => {
         }
     });
 
+    logging.add("Motor initialisiert", "info", 'klappe');
     return true;
 };
 
@@ -106,13 +107,13 @@ const setKlappenStatus = (status, fahrDauer) => {
     //klappe.duration = klappe.perf - klappe.previous.perf;
     klappe.duration = 0;
 
-    logging.add("Klappenstatus " + status + " nach " + (klappe.duration / 1000) + "s - Fahrdauer " + klappe.previous.fahrDauer + " - jetzt " + fahrDauer + "s");
+    logging.add("Klappenstatus " + status + " nach " + (klappe.duration / 1000) + "s - Fahrdauer " + klappe.previous.fahrDauer + " - jetzt " + fahrDauer + "s", 'info', 'klappe');
     events.send('klappenStatus',status);
 };
 
 const setKlappenPosition = (obenUnten) => {
     if (obenUnten != "oben" && obenUnten != "unten") {
-        logging.add("setKlappenPosition() wrong parameter","e");
+        logging.add("setKlappenPosition() wrong parameter", "error", 'klappe');
         return false;
     }
     klappe.position = obenUnten;
@@ -122,13 +123,13 @@ const setKlappenPosition = (obenUnten) => {
     if (!klappe.isInitializing) {
         fs.writeFile("klappenPosition.json", JSON.stringify(klappe.position), 'utf8', function (err) {
             if (err) {
-                logging.add("Could not write klappenPosition.json "+err,"warn");
+                logging.add("Could not write klappenPosition.json "+err, "warn", 'klappe');
                 return false;
             }
-            logging.add("Wrote klappenPosition.json");
+            logging.add("Wrote klappenPosition.json", 'info', 'klappe');
         });
     } else {
-        logging.add("Skipped writing klappenPosition.json during initialization", "debug");
+        logging.add("Skipped writing klappenPosition.json during initialization", "debug", 'klappe');
     }
 
     heating.checkLight();
@@ -139,16 +140,16 @@ const manuelleInitialPosition = (pos) => {
         initialPositionManuell = pos;
         return true;
     }
-    logging.add("Fehler: Keine gültige manuelle Initialposition (oben/unten)")
+    logging.add("Fehler: Keine gültige manuelle Initialposition (oben/unten)", 'error', 'klappe');
     return false;
 };
 
 const korrigiereHoch = () => {
-    logging.add("Korrigiere hoch");
+    logging.add("Korrigiere hoch", 'info', 'klappe');
     return klappeFahren("hoch", config.korrekturSekunden, true);
 };
 const korrigiereRunter = () => {
-    logging.add("Korrigiere runter");
+    logging.add("Korrigiere runter", 'info', 'klappe');
     return klappeFahren("runter", config.korrekturSekunden, true);
 };
 
@@ -163,7 +164,7 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
     }
 
     if(richtung != "hoch" && richtung != "runter") {
-        logging.add("klappe.klappeFahren() - Invalid parameter (hoch/runter)",'warn');
+        logging.add("klappe.klappeFahren() - Invalid parameter (hoch/runter)", 'warn', 'klappe');
         return false;
     }
 
@@ -183,37 +184,37 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
     if (klappe.status != "angehalten") {
         response.success = false;
         response.message = `klappe: Die ist gar nicht angehalten`;
-        logging.add(response.message);
+        logging.add(response.message, 'info', 'klappe');
     }
     else if (richtung != "hoch" && richtung != "runter") {
         response.success = false;
         response.message = `klappe: Keine gültige Richtung angebeben (hoch/runter)`;
-        logging.add(response.message);
+        logging.add(response.message, 'info', 'klappe');
     }
     else if (!initialisiert && sekunden > config.korrekturSekunden) {
         response.success = false;
         response.message = `klappe ${richtung}: ${sekunden}s geht nicht. Noch nicht kalibriert`;
-        logging.add(response.message);
+        logging.add(response.message, 'info', 'klappe');
     }
     else if (sekunden > config.maxSekundenEinWeg) {
         response.success = false;
         response.message = `klappe ${richtung}: ${sekunden}s ist zu lang, maximal ${config.maxSekundenEinWeg}s erlaubt`;
-        logging.add(response.message);
+        logging.add(response.message, 'info', 'klappe');
     }
     else if ((!initialisiert && sekunden <= config.korrekturSekunden) || initialisiert) {
 
         // Überprüfe ob die Fahrt zulässig ist (nicht zu weit hoch/runter)
         if (Math.abs(neuePosition) > config.ganzeFahrtSek || neuePosition < 0 || neuePosition > config.ganzeFahrtSek) {
             response.message = `HALLO FALSCH DA REISST DER FADEN! klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`;
-            logging.add(response.message);
+            logging.add(response.message, 'info', 'klappe');
             response.success = false;
         } else {
-            logging.add(`klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`);
+            logging.add(`klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`, 'debug', 'klappe');
 
             // Klappe für x Sekunden
             response.success = true;
             response.message = `klappe ${richtung}: für ${sekunden}s ${korrektur ? `(korrektur nach hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek})` : ''}`;
-            logging.add(response.message);
+            logging.add(response.message, 'info', 'klappe');
 
             // Starte den Motor jetzt.
             if (richtung == "hoch") {
@@ -245,7 +246,7 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
                     klappe.positionNum += fahrtWert;
                 }
 
-                logging.add(`sekunden: ${sekunden}, ganzeFahrtSek: ${config.ganzeFahrtSek}, positionNum: ${klappe.positionNum}, richtung: ${richtung}, bool: ${(sekunden >= config.ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == config.ganzeFahrtSek)}`);
+                logging.add(`sekunden: ${sekunden}, ganzeFahrtSek: ${config.ganzeFahrtSek}, positionNum: ${klappe.positionNum}, richtung: ${richtung}, bool: ${(sekunden >= config.ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == config.ganzeFahrtSek)}`, 'debug', 'klappe');
 
                 if (sekunden >= config.ganzeFahrtSek || klappe.positionNum == 0 || klappe.positionNum == config.ganzeFahrtSek) {
                     if (richtung == "hoch") {
@@ -261,7 +262,7 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
     }
     else {
         response.message = `klappe ${richtung}: ${sekunden} geht nicht. Grund nicht erkennbar.`;
-        logging.add(response.message,'warn');
+        logging.add(response.message, 'warn', 'klappe');
         response.success = false;
     }
 
@@ -297,7 +298,7 @@ kalibriere = (obenUnten) => {
     setKlappenStatus("angehalten", null);
     initialisiert = true;
     let message = `Position ${klappe.position} kalibriert. PositionNum: ${klappe.positionNum}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}`;
-    logging.add(message);
+    logging.add(message, 'info', 'klappe');
     return { success: true, message: message };
 }
 
