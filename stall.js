@@ -11,7 +11,9 @@ var logging = require('./modules/utilities/logging.js');
 
 var events = require('./modules/utilities/events.js');
 
+// Load Config
 let config = require('./config.json');
+
 const bootTimestamp = moment();
 logging.thingspeakSetAPIKey(config.thingspeakAPI);
 logging.setLogLevel(config.logLevel);
@@ -20,13 +22,13 @@ const ganzeFahrtSek = config.ganzeFahrtSek;
 
 const skipGpio = {
   motor: config.skipGpio.motor,
-  dht22: config.skipGpio.dht22,
   sensoren: config.skipGpio.sensoren,
   bme280: config.skipGpio.bme280,
   ir: config.skipGpio.ir,
   shelly: config.skipGpio.shelly
 }
 
+// GPIO Init
 var gpioRelais = require('./modules/gpio/gpio-relais.js');
 gpioRelais.configure( config.gpioPorts.out.hoch,
                 config.gpioPorts.out.runter,
@@ -36,6 +38,7 @@ gpioRelais.configure( config.gpioPorts.out.hoch,
                 skipGpio.motor,
                 skipGpio.ir);
 
+// BME280 Init
 if(!skipGpio.bme280) {
   logging.add("Initializing BME280 Temperature Sensor");
   var bme280 = require('./modules/temperature/bme280.js');
@@ -59,21 +62,13 @@ getHumidity = () => {
   return null;
 }
 
+// Telegram Init
 var telegram = require('./modules/integrations/telegram.js');
 telegram.configure(config.telegram.sendMessages,
                   config.telegram.token,
                   config.telegram.chatId);
 
-if(!skipGpio.dht22) {
-  logging.add("Initializing DHT22 Temperature Sensor");
-  var dht22 = require('./modules/temperature/dht22.js');
-  dht22.configure(config.gpioPorts.out.dht22, config.intervals.dht22);
-  dht22.readSensor();
-}
-else {
-  logging.add("Skipping DHT22 Temperature Sensor");
-}
-
+// CPU Temperature Init
 if(!skipGpio.cpuTemp) {
   logging.add("Initializing CPU Temperature Sensor");
   var cpuTemp = require('./modules/temperature/cpu.js');
@@ -84,6 +79,7 @@ else {
   logging.add("Skipping CPU Temperature Sensor");
 }
 
+// Hatch Init
 var klappenModul = require('./modules/hatch/klappe.js');
 klappenModul.configure(
   config.sensorObenMontiert,
@@ -96,7 +92,9 @@ klappenModul.configure(
 
 klappenModul.stoppeKlappe();
 logging.add("Motor initialisiert");
+klappenModul.init();
 
+/*
 sensoren = {
   sensorOben: {
     value: null,
@@ -208,7 +206,7 @@ function leseSensoren() {
     }, sensoren.intervalSec * 1000);
   }
 }
-leseSensoren();
+leseSensoren();*/
 
 
 // function setSensorMontiert(pos,boo) {
@@ -232,8 +230,6 @@ leseSensoren();
 //   logging.add(message);
 //   return {success: success, message: message};
 // }
-
-klappenModul.init();
 
 var camera = require('./modules/camera/camera.js');
 camera.configure(config.camera.intervalSec, config.camera.maxAgeSec, config.camera.autoTakeMin);
@@ -296,9 +292,8 @@ app.get('/status', function (req, res) {
     skipGpio: skipGpio,
     bme280: bme280.status,
     bewegungSumme: klappenModul.bewegungSumme(),
-    //dht22: dht22.status,
     cpuTemp: cpuTemp.status,
-    sensoren: sensoren,
+    //sensoren: sensoren,
     camera: {
       image: 'http://192.168.31.21/cam',
       time: camera.data.time,
