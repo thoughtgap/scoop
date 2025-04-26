@@ -2,7 +2,6 @@ var logging = require('../utilities/logging.js');
 var moment = require('moment');
 var gpioRelais = require('../gpio/gpio-relais.js');
 var events = require('../utilities/events.js');
-var suncalc = require('../utilities/suncalc.js');
 var camera = require('../camera/camera.js');
 var heating = require('../climate/heating.js');
 const fs = require('fs');
@@ -94,6 +93,80 @@ const init = () => {
     return true;
 };
 
+const initPromise = () => {
+    return new Promise((resolve, reject) => {
+        logging.add('Initializing hatch 🐔 pok with Promise', 'info', 'klappe');
+        klappe.isInitializing = true;  // Set initialization flag
+
+        try {
+            stoppeKlappe();
+            logging.add("Motor stopped", 'info', 'klappe');
+
+            fs.readFile('klappenPosition.json', (err, data) => {
+                if (err) {
+                    logging.add("Could not read klappenPosition.json "+err, "warn", 'klappe');
+                    // Set position to null to indicate unknown state
+                    setKlappenPosition(null);
+                    setKlappenStatus("angehalten", null);
+                    klappe.isInitializing = false;  // Clear initialization flag
+                    initialisiert = true; // Consider it initialized even with no position
+                    logging.add("Hatch initialized with unknown position", 'info', 'klappe');
+                    
+                    // Remove artificial delay
+                    resolve(); // Resolve even with the error - it's not critical
+                    return;
+                }
+
+                try {
+                    const position = JSON.parse(data);
+                    if (position !== "oben" && position !== "unten") {
+                        logging.add("Invalid position in klappenPosition.json: " + position, "warn", 'klappe');
+                        // Set position to null to indicate unknown state
+                        setKlappenPosition(null);
+                        setKlappenStatus("angehalten", null);
+                        klappe.isInitializing = false;  // Clear initialization flag
+                        initialisiert = true; // Consider it initialized even with invalid position
+                        logging.add("Hatch initialized with unknown position", 'info', 'klappe');
+                        
+                        // Remove artificial delay
+                        resolve(); // Resolve even with the error - it's not critical
+                        return;
+                    }
+                    
+                    // Use kalibriere to set the hatch position (not this.kalibriere)
+                    kalibriere(position);
+                    logging.add("Read klappenPosition.json --> "+data, 'info', 'klappe');
+                    
+                    // Send initial position and status events
+                    setKlappenPosition(position);
+                    setKlappenStatus("angehalten", null);
+                    klappe.isInitializing = false;  // Clear initialization flag
+                    initialisiert = true;
+                    logging.add("Hatch initialized successfully", 'info', 'klappe');
+                    
+                    // Remove artificial delay
+                    resolve();
+                } catch(e) {
+                    logging.add("Error parsing klappenPosition.json: " + e, "warn", 'klappe');
+                    // Set position to null to indicate unknown state
+                    setKlappenPosition(null);
+                    setKlappenStatus("angehalten", null);
+                    klappe.isInitializing = false;  // Clear initialization flag
+                    initialisiert = true; // Consider it initialized even with error
+                    logging.add("Hatch initialized with unknown position", 'info', 'klappe');
+                    
+                    // Remove artificial delay
+                    resolve(); // Resolve even with the error - it's not critical
+                }
+            });
+        } catch (error) {
+            logging.add(`Unexpected error initializing hatch: ${error.message}`, 'error', 'klappe');
+            klappe.isInitializing = false;
+            reject(error);
+        }
+    });
+};
+
 const setKlappenStatus = (status, fahrDauer) => {
     // Merke alte Werte
     klappe.previous = {
@@ -157,6 +230,7 @@ const korrigiereRunter = () => {
 };
 
 const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
+    logging.add("klappeFahren() richtung: " + richtung + " sekunden: " + sekunden + " korrektur: " + korrektur, 'info', 'klappe');
     let response = {
         success: false,
         message: ""
@@ -166,11 +240,8 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
         sekunden = config.ganzeFahrtSek;
     }
 
-    if(richtung != "hoch" && richtung != "runter") {
-        logging.add("klappe.klappeFahren() - Invalid parameter (hoch/runter)", 'warn', 'klappe');
-        return false;
-    }
 
+    // Calculate new hatch position
     fahrtWert = 0;
     if(korrektur != true) {
         if (richtung == "hoch") {
@@ -183,33 +254,28 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
     }
     neuePosition = klappe.positionNum + fahrtWert;
 
-
+    // Check Parameters
     if (klappe.status != "angehalten") {
         response.success = false;
         response.message = `klappe: Die ist gar nicht angehalten`;
-        logging.add(response.message, 'info', 'klappe');
     }
     else if (richtung != "hoch" && richtung != "runter") {
         response.success = false;
         response.message = `klappe: Keine gültige Richtung angebeben (hoch/runter)`;
-        logging.add(response.message, 'info', 'klappe');
     }
     else if (!initialisiert && sekunden > config.korrekturSekunden) {
         response.success = false;
         response.message = `klappe ${richtung}: ${sekunden}s geht nicht. Noch nicht kalibriert`;
-        logging.add(response.message, 'info', 'klappe');
     }
     else if (sekunden > config.maxSekundenEinWeg) {
         response.success = false;
         response.message = `klappe ${richtung}: ${sekunden}s ist zu lang, maximal ${config.maxSekundenEinWeg}s erlaubt`;
-        logging.add(response.message, 'info', 'klappe');
     }
     else if ((!initialisiert && sekunden <= config.korrekturSekunden) || initialisiert) {
 
         // Überprüfe ob die Fahrt zulässig ist (nicht zu weit hoch/runter)
         if (Math.abs(neuePosition) > config.ganzeFahrtSek || neuePosition < 0 || neuePosition > config.ganzeFahrtSek) {
             response.message = `HALLO FALSCH DA REISST DER FADEN! klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`;
-            logging.add(response.message, 'info', 'klappe');
             response.success = false;
         } else {
             logging.add(`klappe.position: ${klappe.position}, fahrtWert: ${fahrtWert}, hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek}, neuePosition: ${neuePosition}`, 'debug', 'klappe');
@@ -217,7 +283,6 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
             // Klappe für x Sekunden
             response.success = true;
             response.message = `klappe ${richtung}: für ${sekunden}s ${korrektur ? `(korrektur nach hochSek: ${klappe.hochSek}, runterSek: ${klappe.runterSek})` : ''}`;
-            logging.add(response.message, 'info', 'klappe');
 
             // Starte den Motor jetzt.
             if (richtung == "hoch") {
@@ -265,10 +330,10 @@ const klappeFahren = (richtung, sekunden = null, korrektur = false) => {
     }
     else {
         response.message = `klappe ${richtung}: ${sekunden} geht nicht. Grund nicht erkennbar.`;
-        logging.add(response.message, 'warn', 'klappe');
         response.success = false;
     }
 
+    logging.add("klappeFahren() " + response.message, (response.success ? 'info' : 'warn'), 'klappe');
     return response;
 };
 
@@ -278,7 +343,6 @@ stoppeKlappe = () => {
 
     // Take a picture and send via Telegram
     camera.queueTelegram();
-    camera.getIRJpg();
 }
 
 bewegungSumme = () => {
@@ -333,6 +397,7 @@ const getMovementState = (status) => {
 
 exports.configure = configure;
 exports.init = init;
+exports.initPromise = initPromise;
 exports.klappe = klappe;
 exports.config = config;
 exports.setKlappenStatus = setKlappenStatus;

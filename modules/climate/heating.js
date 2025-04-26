@@ -107,8 +107,8 @@ const needToHeatLonger = () => {
 
 const setEnableHeating = (boolYesNo) => {
     // Add debug logging
-    //logging.add(`setEnableHeating called with value: ${boolYesNo}`    , 'debug', 'heating');
-    //logging.add(`Previous status: ${JSON.stringify(status, null, 2)}` , 'debug', 'heating');
+    logging.add(`setEnableHeating called with value: ${boolYesNo}`    , 'info', 'heating');
+    logging.add(`Previous status: ${JSON.stringify(status, null, 2)}` , 'info', 'heating');
 
     // For GUI Usage
     if(boolYesNo === true) {
@@ -169,6 +169,7 @@ const getTemperature = () => {
 }
 
 const checkLight = (newTemperature = null) => {
+    logging.add("checkLight()", 'info', 'heating');
     status.lastCheck = moment();
 
     let lightNeeded =  false;
@@ -203,7 +204,7 @@ const checkLight = (newTemperature = null) => {
         lightConfig.doorOK = doorOK;
         lightConfig.temperatureOK = temperatureOK;
 
-        // logging.add("Heating/Light Params: Timeframe "+timeFrameOK + " // Door "+doorOK + " // Temp "+temperatureOK + " ===> " + lightNeeded);
+        logging.add("Heating/Light Params: Timeframe "+timeFrameOK + " // Door "+doorOK + " // Temp "+temperatureOK + " ===> " + lightNeeded, 'info', 'heating');
         // logging.add("------");
 
         // Reason for light being on

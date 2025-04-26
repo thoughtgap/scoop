@@ -5,10 +5,11 @@ const klappe = require('../hatch/klappe.js');
 
 let client = null;
 let messageQueue = [];
+let initialized = false;
 
 const connect = () => {
     if (!config.mqtt || !config.mqtt.broker) {
-        logging.add('MQTT broker not configured', 'warn','mqtt');
+        logging.add('MQTT broker not configured in config.json', 'warn','mqtt');
         return;
     }
 
@@ -174,7 +175,38 @@ const publish = (topic, message) => {
     });
 };
 
-// Initialize connection
-connect();
+/**
+ * Initialize the MQTT module (can be called externally)
+ */
+const initialize = () => {
+    if (initialized) {
+        logging.add('MQTT module already initialized', 'warn', 'mqtt');
+        return;
+    }
+    
+    logging.add('Initializing MQTT module...', 'info', 'mqtt');
+    
+    // If MQTT is not configured, mark as initialized but don't connect
+    if (!config.mqtt || !config.mqtt.broker) {
+        logging.add('MQTT broker not configured, skipping initialization', 'warn', 'mqtt');
+        initialized = true;
+        return;
+    }
+    
+    // If we already have a client, clean it up before creating a new one
+    if (client) {
+        client.end(true);
+        client = null;
+    }
+    
+    // Connect to MQTT broker
+    connect();
+    
+    initialized = true;
+    logging.add('MQTT module initialized', 'info', 'mqtt');
+};
 
+// Export functions
+exports.initialize = initialize;
 exports.publish = publish;
+exports.isInitialized = () => initialized;

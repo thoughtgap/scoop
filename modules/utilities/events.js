@@ -9,7 +9,7 @@ var sse = new SSE();
 
 send = (eventType, message) => {
     sse.send(message,eventType);
-    logging.add(`Event ${eventType}: ${JSON.stringify(message)}`,'debug');
+    logging.add(`Event ${eventType}: ${JSON.stringify(message)}`,'debug','events');
 
     // Publish relevant events to MQTT
     switch(eventType) {
