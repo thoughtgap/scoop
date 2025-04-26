@@ -102,12 +102,8 @@ initPromise = () => {
                             logging.add("gpioIR initialized", 'info', 'gpio-relais');
                         }
                         
-                        // Add artificial 10-second delay for testing sequential loading
-                        logging.add("GPIO initialized - adding artificial 10-second delay for testing", 'info', 'gpio-relais');
-                        setTimeout(() => {
-                            logging.add("Artificial delay complete, continuing initialization", 'info', 'gpio-relais');
-                            resolve();
-                        }, 10000);
+                        // Remove artificial delay
+                        resolve();
                     })
                     .catch(err => {
                         logging.add(`Error initializing GPIO control: ${err.message}`, 'error', 'gpio-relais');
@@ -122,12 +118,8 @@ initPromise = () => {
                     logging.add("Skipping real gpioIR init due to skipGpio", 'info', 'gpio-relais');
                 }
                 
-                // Add artificial 10-second delay for testing sequential loading (even when skipping)
-                logging.add("GPIO skipped - adding artificial 10-second delay for testing", 'info', 'gpio-relais');
-                setTimeout(() => {
-                    logging.add("Artificial delay complete, continuing initialization", 'info', 'gpio-relais');
-                    resolve();
-                }, 10000);
+                // Remove artificial delay
+                resolve();
             }
         } catch (error) {
             logging.add(`Unexpected error in GPIO initialization: ${error.message}`, 'error', 'gpio-relais');

@@ -9,6 +9,8 @@ const compression = require('compression');
 
 var logging = require('./modules/utilities/logging.js');
 
+var events = require('./modules/utilities/events.js');
+
 // Load Config
 let config = require('./config.json');
 
@@ -26,8 +28,11 @@ const skipGpio = {
   shelly: config.skipGpio.shelly
 }
 
-// GPIO Init first with Promise-based initialization
+// Require modules that need sequential initialization
 var gpioRelais = require('./modules/gpio/gpio-relais.js');
+var klappenModul = require('./modules/hatch/klappe.js');
+
+// Configure GPIO
 gpioRelais.configure(
   config.gpioPorts.out.hoch,
   config.gpioPorts.out.runter,
@@ -38,17 +43,16 @@ gpioRelais.configure(
   skipGpio.ir
 );
 
-// Initialize GPIO first, then the rest of the application
+// Initialize GPIO first, then the Hatch, then the rest of the application
 logging.add('Starting sequential module initialization', 'info', 'stall');
 logging.add('Step 1: Initializing GPIO module...', 'info', 'stall');
 
 gpioRelais.initPromise()
   .then(() => {
     logging.add('GPIO module initialized successfully', 'info', 'stall');
-    
-    // Continue with the rest of initialization
-    // Hatch Init
-    var klappenModul = require('./modules/hatch/klappe.js');
+    logging.add('Step 2: Initializing Hatch module...', 'info', 'stall');
+
+    // Configure Hatch module
     klappenModul.configure(
       config.sensorObenMontiert,
       config.sensorUntenMontiert,
@@ -57,11 +61,16 @@ gpioRelais.initPromise()
       config.korrekturSekunden,
       skipGpio
     );
-    klappenModul.init();
-
-    // Events Init
-    var events = require('./modules/utilities/events.js');
-
+    
+    // Initialize Hatch after GPIO
+    return klappenModul.initPromise();
+  })
+  .then(() => {
+    logging.add('Hatch module initialized successfully', 'info', 'stall');
+    logging.add('Step 3: Initializing remaining modules...', 'info', 'stall');
+    
+    // Continue with the rest of initialization
+    
     // BME280 Init
     if(!skipGpio.bme280) {
       logging.add("Initializing BME280 Temperature Sensor", 'info', 'stall');
@@ -320,6 +329,6 @@ gpioRelais.initPromise()
     });
   })
   .catch(error => {
-    logging.add(`GPIO initialization failed: ${error.message}`, 'error', 'stall');
+    logging.add(`Initialization failed: ${error.message}`, 'error', 'stall');
     process.exit(1);
   });

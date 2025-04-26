@@ -94,6 +94,80 @@ const init = () => {
     return true;
 };
 
+const initPromise = () => {
+    return new Promise((resolve, reject) => {
+        logging.add('Initializing hatch 🐔 pok with Promise', 'info', 'klappe');
+        klappe.isInitializing = true;  // Set initialization flag
+
+        try {
+            stoppeKlappe();
+            logging.add("Motor stopped", 'info', 'klappe');
+
+            fs.readFile('klappenPosition.json', (err, data) => {
+                if (err) {
+                    logging.add("Could not read klappenPosition.json "+err, "warn", 'klappe');
+                    // Set position to null to indicate unknown state
+                    setKlappenPosition(null);
+                    setKlappenStatus("angehalten", null);
+                    klappe.isInitializing = false;  // Clear initialization flag
+                    initialisiert = true; // Consider it initialized even with no position
+                    logging.add("Hatch initialized with unknown position", 'info', 'klappe');
+                    
+                    // Remove artificial delay
+                    resolve(); // Resolve even with the error - it's not critical
+                    return;
+                }
+
+                try {
+                    const position = JSON.parse(data);
+                    if (position !== "oben" && position !== "unten") {
+                        logging.add("Invalid position in klappenPosition.json: " + position, "warn", 'klappe');
+                        // Set position to null to indicate unknown state
+                        setKlappenPosition(null);
+                        setKlappenStatus("angehalten", null);
+                        klappe.isInitializing = false;  // Clear initialization flag
+                        initialisiert = true; // Consider it initialized even with invalid position
+                        logging.add("Hatch initialized with unknown position", 'info', 'klappe');
+                        
+                        // Remove artificial delay
+                        resolve(); // Resolve even with the error - it's not critical
+                        return;
+                    }
+                    
+                    // Use kalibriere to set the hatch position (not this.kalibriere)
+                    kalibriere(position);
+                    logging.add("Read klappenPosition.json --> "+data, 'info', 'klappe');
+                    
+                    // Send initial position and status events
+                    setKlappenPosition(position);
+                    setKlappenStatus("angehalten", null);
+                    klappe.isInitializing = false;  // Clear initialization flag
+                    initialisiert = true;
+                    logging.add("Hatch initialized successfully", 'info', 'klappe');
+                    
+                    // Remove artificial delay
+                    resolve();
+                } catch(e) {
+                    logging.add("Error parsing klappenPosition.json: " + e, "warn", 'klappe');
+                    // Set position to null to indicate unknown state
+                    setKlappenPosition(null);
+                    setKlappenStatus("angehalten", null);
+                    klappe.isInitializing = false;  // Clear initialization flag
+                    initialisiert = true; // Consider it initialized even with error
+                    logging.add("Hatch initialized with unknown position", 'info', 'klappe');
+                    
+                    // Remove artificial delay
+                    resolve(); // Resolve even with the error - it's not critical
+                }
+            });
+        } catch (error) {
+            logging.add(`Unexpected error initializing hatch: ${error.message}`, 'error', 'klappe');
+            klappe.isInitializing = false;
+            reject(error);
+        }
+    });
+};
+
 const setKlappenStatus = (status, fahrDauer) => {
     // Merke alte Werte
     klappe.previous = {
@@ -333,6 +407,7 @@ const getMovementState = (status) => {
 
 exports.configure = configure;
 exports.init = init;
+exports.initPromise = initPromise;
 exports.klappe = klappe;
 exports.config = config;
 exports.setKlappenStatus = setKlappenStatus;
