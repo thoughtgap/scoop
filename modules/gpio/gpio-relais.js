@@ -41,9 +41,11 @@ configure = (pinHoch, pinRunter, pinIR, motorAus, motorEin, skipGpio, skipGpioIR
         ", skipGpio " + skipGpio +
         ", skipGpioIR " + skipGpioIR, 'info', 'gpio-relais');
 
-    init();
+    // Keep the original behavior, but don't auto-initialize
+    // when initPromise is called instead
 };
 
+// Original init function (for backward compatibility)
 init = () => {    
     if(!motorConfig.skipGpio || !motorConfig.skipGpioIR) {
         gpioControl.configure(motorConfig.skipGpio).catch(err => {
@@ -69,6 +71,69 @@ init = () => {
         motorConfig.gpioIRInit = true;
         logging.add("gpioIR initialized", 'info', 'gpio-relais');
     }
+};
+
+// New Promise-based initialization function
+initPromise = () => {
+    return new Promise((resolve, reject) => {
+        logging.add("Initializing GPIO module...", 'info', 'gpio-relais');
+        
+        try {
+            if(!motorConfig.skipGpio || !motorConfig.skipGpioIR) {
+                gpioControl.configure(motorConfig.skipGpio)
+                    .then(() => {
+                        // Initialize GPIO components
+                        if (motorConfig.skipGpio) {
+                            logging.add("Skipping real gpioMotor init due to skipGpio", 'info', 'gpio-relais');
+                        }
+                        else {
+                            global.klappeHoch = gpioControl.createGpioWrapper(motorConfig.pinHoch, 'high');
+                            global.klappeRunter = gpioControl.createGpioWrapper(motorConfig.pinRunter, 'high');
+                            motorConfig.gpioInit = true;
+                            logging.add("motorGpio initialized", 'info', 'gpio-relais');
+                        }
+
+                        if (motorConfig.skipGpioIR) {
+                            logging.add("Skipping real gpioIR init due to skipGpio", 'info', 'gpio-relais');
+                        }
+                        else {
+                            global.gpioIR = gpioControl.createGpioWrapper(motorConfig.pinIR, 'high');
+                            motorConfig.gpioIRInit = true;
+                            logging.add("gpioIR initialized", 'info', 'gpio-relais');
+                        }
+                        
+                        // Add artificial 10-second delay for testing sequential loading
+                        logging.add("GPIO initialized - adding artificial 10-second delay for testing", 'info', 'gpio-relais');
+                        setTimeout(() => {
+                            logging.add("Artificial delay complete, continuing initialization", 'info', 'gpio-relais');
+                            resolve();
+                        }, 10000);
+                    })
+                    .catch(err => {
+                        logging.add(`Error initializing GPIO control: ${err.message}`, 'error', 'gpio-relais');
+                        reject(new Error(`GPIO initialization failed: ${err.message}`));
+                    });
+            } else {
+                // If skipping GPIO, just initialize the components and resolve
+                if (motorConfig.skipGpio) {
+                    logging.add("Skipping real gpioMotor init due to skipGpio", 'info', 'gpio-relais');
+                }
+                if (motorConfig.skipGpioIR) {
+                    logging.add("Skipping real gpioIR init due to skipGpio", 'info', 'gpio-relais');
+                }
+                
+                // Add artificial 10-second delay for testing sequential loading (even when skipping)
+                logging.add("GPIO skipped - adding artificial 10-second delay for testing", 'info', 'gpio-relais');
+                setTimeout(() => {
+                    logging.add("Artificial delay complete, continuing initialization", 'info', 'gpio-relais');
+                    resolve();
+                }, 10000);
+            }
+        } catch (error) {
+            logging.add(`Unexpected error in GPIO initialization: ${error.message}`, 'error', 'gpio-relais');
+            reject(error);
+        }
+    });
 };
 
 stoppeMotor = () => {
@@ -155,6 +220,8 @@ IRlogChange = (newStatus) => {
 }
 
 exports.configure = configure;
+exports.init = init;
+exports.initPromise = initPromise;
 exports.stoppeMotor = stoppeMotor;
 exports.fahreHoch = fahreHoch;
 exports.fahreRunter = fahreRunter;

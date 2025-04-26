@@ -1,137 +1,74 @@
-# Sequential Loading Implementation Plan
+# Sequential Module Loading Implementation
 
 ## Overview
-This document outlines the plan for implementing sequential loading in the chicken coop system and cleaning up the `stall.js` file.
+This document details the implementation of sequential module loading for the scoop application. The goal is to ensure modules are loaded in a specific order to guarantee system stability and correct initialization.
 
-## Current Issues
-1. `stall.js` is monolithic and handles too many responsibilities
-2. Module initialization is not properly sequenced
-3. Route handlers are mixed with initialization code
-4. Error handling during initialization is inconsistent
+## Loading Sequence
+The required loading sequence is:
 
-## Implementation Order
+1. GPIO module initialization
+2. Hatch module initialization 
+3. Remaining modules in parallel
+4. Start serving the application
 
-### Phase 1: Cleanup stall.js
-The goal is to simplify `stall.js` by removing route handlers and organizing the code better.
+## Implementation Steps
 
-#### Step 1: Create Route Module Structure
-- [x] Create `modules/routes/index.js`
-  - [x] Move HTTP middleware setup
-  - [x] Move static file serving configuration
-  - [x] Move all route handlers
-  - [x] Implement proper error handling
-  - [x] Add request logging
+### Step 1: GPIO Module with Promise-based Initialization
+We've added a Promise-based initialization function to the GPIO module while keeping the original init function for backward compatibility:
 
-#### Step 2: Migrate Routes from stall.js
-- [ ] Create migration plan for each route group:
-  - [x] Core Routes (`/`, `/status`, `/log`, `/reset`)
-  - [x] Hatch Routes (`/klappe/*`)
-  - [x] Camera Routes (`/cam/*`)
-  - [x] Shelly Routes (`/shelly/*`)
-  - [x] Light Routes (`/light/*`)
-- [ ] Update `stall.js` to use new route modules:
-  ```javascript
-  // In stall.js
-  const routes = require('./modules/routes');
-  
-  // Replace all route definitions with:
-  app.use('/', routes);
-  ```
-- [ ] Test each route group after migration
-- [ ] Remove old route handlers from `stall.js`
+1. Added `initPromise()` method to gpio-relais.js that returns a Promise
+2. Kept original behavior for backward compatibility
+3. Added proper error handling
 
-#### Step 3: Organize Module Imports
-- [ ] Group imports by category:
-  - [ ] Core dependencies (express, fs, etc.)
-  - [ ] Utility modules (logging, events)
-  - [ ] Hardware modules (GPIO, sensors)
-  - [ ] Integration modules (telegram, shelly)
-  - [ ] Route modules
+```javascript
+// In gpio-relais.js
+initPromise = () => {
+    return new Promise((resolve, reject) => {
+        // Initialization logic
+        // ...
+        resolve(); // when successful
+        // or
+        reject(new Error('Error message')); // on failure
+    });
+};
 
-#### Step 4: Clean Configuration
-- [ ] Move configuration loading to a separate function
-- [ ] Add validation for required config values
-- [ ] Add error handling for missing config
+exports.initPromise = initPromise;
+```
 
-#### Step 5: Simplify Main Application
-- [ ] Remove all route handlers (moved to routes module)
-- [ ] Keep only essential setup:
-  - [ ] Configuration loading
-  - [ ] Logging setup
-  - [ ] Module initialization
-  - [ ] Server startup
+### Step 2: Sequential Loading in stall.js
+Modified stall.js to use the Promise-based initialization:
 
-### Phase 2: Implement Sequential Loading
-After `stall.js` is cleaned up, implement proper sequential initialization.
+```javascript
+// In stall.js
+// Configure GPIO
+gpioRelais.configure(...);
 
-#### Step 1: Create Initialization Module
-- [ ] Create `modules/initialization/index.js`
-- [ ] Define initialization sequence:
-  ```javascript
-  const initSequence = [
-    {
-      name: 'gpio',
-      init: () => gpioRelais.configure(...)
-    },
-    {
-      name: 'hatch',
-      init: () => klappenModul.configure(...)
-    },
-    {
-      name: 'parallel',
-      init: () => Promise.all([
-        bme280.configure(...),
-        cpuTemp.configure(...),
-        // ... other parallel init
-      ])
-    }
-  ];
-  ```
+// Initialize GPIO first, then the rest of the application
+gpioRelais.initPromise()
+  .then(() => {
+    // All the remaining initialization code goes here
+    // ...
 
-#### Step 2: Implement Sequential Initialization
-- [ ] Create initialization function:
-  ```javascript
-  async function initialize() {
-    for (const step of initSequence) {
-      try {
-        await step.init();
-        logging.add(`Initialized ${step.name}`, 'info');
-      } catch (error) {
-        logging.add(`Failed to initialize ${step.name}: ${error}`, 'error');
-        throw error;
-      }
-    }
-  }
-  ```
+    // Start the server at the end
+    app.listen(3000, function () {
+      logging.add('listening on port 3000!', 'info', 'stall');
+    });
+  })
+  .catch(error => {
+    logging.add(`GPIO initialization failed: ${error.message}`, 'error', 'stall');
+    process.exit(1);
+  });
+```
 
-#### Step 3: Add Error Handling
-- [ ] Implement proper error handling for each module
-- [ ] Add logging for initialization failures
-- [ ] Add graceful shutdown on critical errors
+### Next Steps
+For the next phase, we'll implement the same pattern for the Hatch module:
 
-#### Step 4: Update Module Dependencies
-- [ ] Modify each module to support Promise-based initialization
-- [ ] Add proper error handling in each module
-- [ ] Update module exports to include initialization status
+1. Add a Promise-based initialization function to the Hatch module
+2. Update stall.js to initialize Hatch after GPIO init completes
+3. Keep the code structure simple and maintain backward compatibility
 
-## Testing Plan
-For each phase, test:
-- [ ] Module initialization
-- [ ] Error handling
-- [ ] Route functionality
-- [ ] System startup
-- [ ] Graceful shutdown
-
-## Rollback Plan
-1. Keep backup of original `stall.js`
-2. Document all changes
-3. Test each phase before proceeding
-4. Have ability to revert changes if issues arise
-
-## Success Criteria
-- [ ] `stall.js` is simplified and focused
-- [ ] All modules initialize in correct order
-- [ ] No initialization race conditions
-- [ ] Proper error handling and logging
-- [ ] All routes work as before
-- [ ] Cleaner, more maintainable code structure 
+## Implementation Notes
+- Minimal changes focused on the sequential loading requirement
+- Maintained all existing function signatures and interfaces
+- Preserved original code structure as much as possible
+- Used Promise chaining for a clean control flow 
