@@ -38,35 +38,6 @@ gpioRelais.configure( config.gpioPorts.out.hoch,
                 skipGpio.motor,
                 skipGpio.ir);
 
-// BME280 Init
-if(!skipGpio.bme280) {
-  logging.add("Initializing BME280 Temperature Sensor", 'info', 'stall');
-  var bme280 = require('./modules/temperature/bme280.js');
-  bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
-  logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`, 'info', 'stall');
-  bme280.readBME280();
-}
-else {
-  logging.add("Skipping BME280 Temperature Sensor", 'info', 'stall');
-}
-
-// Telegram Init
-var telegram = require('./modules/integrations/telegram.js');
-telegram.configure(config.telegram.sendMessages,
-                  config.telegram.token,
-                  config.telegram.chatId);
-
-// CPU Temperature Init
-if(!skipGpio.cpuTemp) {
-  logging.add("Initializing CPU Temperature Sensor", 'info', 'stall');
-  var cpuTemp = require('./modules/temperature/cpu.js');
-  cpuTemp.configure(config.intervals.cpu);
-  cpuTemp.readSensor();
-}
-else {
-  logging.add("Skipping CPU Temperature Sensor", 'info', 'stall');
-}
-
 // Hatch Init
 var klappenModul = require('./modules/hatch/klappe.js');
 klappenModul.configure(
@@ -77,9 +48,6 @@ klappenModul.configure(
   config.korrekturSekunden,
   skipGpio
 );
-
-klappenModul.stoppeKlappe();
-logging.add("Motor initialisiert", 'info', 'stall');//klappenModul.stoppeKlappe();
 klappenModul.init();
 
 /*
@@ -218,6 +186,35 @@ leseSensoren();*/
 //   logging.add(message);
 //   return {success: success, message: message};
 // }
+
+// BME280 Init
+if(!skipGpio.bme280) {
+  logging.add("Initializing BME280 Temperature Sensor", 'info', 'stall');
+  var bme280 = require('./modules/temperature/bme280.js');
+  bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
+  logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`, 'info', 'stall');
+  bme280.readBME280();
+}
+else {
+  logging.add("Skipping BME280 Temperature Sensor", 'info', 'stall');
+}
+
+// Telegram Init
+var telegram = require('./modules/integrations/telegram.js');
+telegram.configure(config.telegram.sendMessages,
+                  config.telegram.token,
+                  config.telegram.chatId);
+
+// CPU Temperature Init
+if(!skipGpio.cpuTemp) {
+  logging.add("Initializing CPU Temperature Sensor", 'info', 'stall');
+  var cpuTemp = require('./modules/temperature/cpu.js');
+  cpuTemp.configure(config.intervals.cpu);
+  cpuTemp.readSensor();
+}
+else {
+  logging.add("Skipping CPU Temperature Sensor", 'info', 'stall');
+}
 
 var camera = require('./modules/camera/camera.js');
 camera.configure(config.camera.intervalSec, config.camera.maxAgeSec, config.camera.autoTakeMin);

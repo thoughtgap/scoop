@@ -50,6 +50,9 @@ const init = () => {
     logging.add('Initializing hatch 🐔 pok', 'info', 'klappe');
     klappe.isInitializing = true;  // Set initialization flag
 
+    stoppeKlappe();
+    logging.add("Motor initialisiert", 'info', 'klappe');
+
     fs.readFile('klappenPosition.json', (err, data) => {
         if (err) {
             logging.add("Could not read klappenPosition.json "+err, "warn", 'klappe');
