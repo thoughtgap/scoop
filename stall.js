@@ -233,13 +233,6 @@ gpioRelais.initPromise()
       }
       res.send(action);
     });
-    app.get('/reset', function (req, res) {
-        /* Dirty hack for triggering nodemon */
-        var data = fs.readFileSync('test.json', 'utf-8');
-        var newValue = new Date();
-        fs.writeFileSync('test.json', newValue, 'utf-8');
-        res.send("modified test.json");
-    });
     app.get('/cam/new', function (req, res) {
       let takeIt = camera.queue();
       if(takeIt == true) {

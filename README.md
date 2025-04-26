@@ -190,11 +190,6 @@ To tell the hatch if it is up or down
 * `/nightvision/:timestamp?` Same as `/cam/:timestamp?`
 * `/nightvisionsvg/:timestamp?`
 
-
-### Administrative
-* `/reset` will restart the application if it's run via nodemon (will modify a test.js file). Don't judge, please!
-
-
 ### Coop Event Stream
 * `/events` A [server-sent events](https://www.npmjs.com/package/express-sse) (SSE) stream informing about things happening in the coop:
   * newWebcamPic
