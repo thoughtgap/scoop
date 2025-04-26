@@ -2,7 +2,6 @@ var logging = require('../utilities/logging.js');
 var moment = require('moment');
 var gpioRelais = require('../gpio/gpio-relais.js');
 var events = require('../utilities/events.js');
-var suncalc = require('../utilities/suncalc.js');
 var camera = require('../camera/camera.js');
 var heating = require('../climate/heating.js');
 const fs = require('fs');
