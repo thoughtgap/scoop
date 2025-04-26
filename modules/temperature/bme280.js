@@ -222,7 +222,16 @@ readBME280 = () => {
     }
 }
 
-exports.configure = configure;
-exports.readSensor = readBME280;
-exports.status = status;
+getTemperature = () => {
+    return status.values.temperature;
+}
 
+getHumidity = () => {
+    return status.values.humidity;
+}
+
+exports.configure = configure;
+exports.readBME280 = readBME280;
+exports.status = status;
+exports.getTemperature = getTemperature;
+exports.getHumidity = getHumidity;

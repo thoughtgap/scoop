@@ -44,22 +44,10 @@ if(!skipGpio.bme280) {
   var bme280 = require('./modules/temperature/bme280.js');
   bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
   logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`);
-  bme280.readSensor();
+  bme280.readBME280();
 }
 else {
   logging.add("Skipping BME280 Temperature Sensor");
-}
-getTemperature = () => {
-  if(!skipGpio.bme280) {
-    return bme280.status.values.temperature;
-  }
-  return null;
-}
-getHumidity = () => {
-  if(!skipGpio.bme280) {
-    return bme280.status.values.humidity;
-  }
-  return null;
 }
 
 // Telegram Init

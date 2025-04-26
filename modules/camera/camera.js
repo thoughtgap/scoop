@@ -4,6 +4,7 @@ var gpioRelais = require('../gpio/gpio-relais.js');
 var events = require('../utilities/events.js');
 var telegram = require('../integrations/telegram.js');
 var suncalcHelper = require('../utilities/suncalc.js');
+var bme280 = require('../temperature/bme280.js');
 
 var camera = {
     image: null,
@@ -280,8 +281,8 @@ getSvg = (which = "normal") => {
         html += '<image overflow="visible" width="1296" height="972" xlink:href="'+ picUrl +'"/>';
         html += '<text font-family="Arial, Helvetica, sans-serif" x="10" y="40" fill="white" font-size="30px">';
         html +=   '🐔 '+ moment(cameraObj.time).format("HH:mm:ss") + ' (' + moment(cameraObj.time).fromNow() /*+' - '+ new moment().diff(cameraObj.time)/1000 */ + ') '
-        html +=   Math.round(getTemperature() * 10) /10 + '°C   ';
-        html +=   Math.round(getHumidity()) + '%'
+        html +=   Math.round(bme280.getTemperature() * 10) /10 + '°C   ';
+        html +=   Math.round(bme280.getHumidity()) + '%'
         html += '</text>';
       }
       else {
@@ -289,8 +290,8 @@ getSvg = (which = "normal") => {
         html += '<text x="10" y="200" fill="black" font-size="100px">Ich habe leider</text>';
         html += '<text x="50" y="300" fill="black" font-size="100px">kein '+ (which == 'nightvision' ? 'Nachtf' : 'F') +'oto</text>';
         html += '<text x="90" y="400" fill="black" font-size="100px">für dich</text>';
-        if(getTemperature()) {
-          html += '<text x="90" y="430" fill="black" font-size="20px">aber im Stall sind es '+ Math.round(getTemperature() * 10) /10 +' °C</text>'; 
+        if(bme280.getTemperature()) {
+          html += '<text x="90" y="430" fill="black" font-size="20px">aber im Stall sind es '+ Math.round(bme280.getTemperature() * 10) /10 +' °C</text>'; 
         }
       }
             
