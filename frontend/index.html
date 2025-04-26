@@ -2,14 +2,47 @@
 <html ng-app="todoApp">
 
 <head>
-  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.0/angular.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/locale/de.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-moment/1.3.0/angular-moment.min.js"></script> -->
-  <script src="moment.min.js"></script>
-  <script src="angular.min.js"></script>
-  <script src="de.min.js"></script>
-  <script src="angular-moment.min.js"></script>
+  <script>
+    // Function to load scripts with fallback
+    function loadScript(src, fallbackSrc) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = () => {
+          console.log(`Failed to load ${src}, trying fallback...`);
+          const fallbackScript = document.createElement('script');
+          fallbackScript.src = fallbackSrc;
+          fallbackScript.onload = resolve;
+          fallbackScript.onerror = reject;
+          document.head.appendChild(fallbackScript);
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    // Load scripts in sequence with fallbacks
+    Promise.all([
+      loadScript('//cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js', '/frontend/moment.min.js'),
+      loadScript('//ajax.googleapis.com/ajax/libs/angularjs/1.8.0/angular.min.js', '/frontend/angular.min.js')
+    ])
+    .then(() => {
+      // Load locale and angular-moment after moment and angular are loaded
+      return Promise.all([
+        loadScript('//cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/locale/de.min.js', '/frontend/de.min.js'),
+        loadScript('//cdnjs.cloudflare.com/ajax/libs/angular-moment/1.3.0/angular-moment.min.js', '/frontend/angular-moment.min.js')
+      ]);
+    })
+    .then(() => {
+      // Load the application script last
+      const appScript = document.createElement('script');
+      appScript.src = '/frontend/coop.js';
+      document.head.appendChild(appScript);
+    })
+    .catch(error => {
+      console.error('Failed to load required scripts:', error);
+    });
+  </script>
   <style>
     /* Responsive image container */
     .image-container {
@@ -222,8 +255,7 @@
     }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="coop.js"></script>
-  <link rel="icon" href="chick.svg">
+  <link rel="icon" href="/frontend/chick.svg">
   <title>stall</title>
 </head>
 

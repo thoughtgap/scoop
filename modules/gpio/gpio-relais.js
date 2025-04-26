@@ -33,14 +33,13 @@ configure = (pinHoch, pinRunter, pinIR, motorAus, motorEin, skipGpio, skipGpioIR
 
     logging.add("Motor Configure: " +
         "  configured " + motorConfig.configured +
-        ", pinHoch " + motorConfig.pinHoch +
-        ", pinRunter " + motorConfig.pinRunter +
-        ", pinIR " + motorConfig.pinIR +
-        ", motorAus " + motorConfig.motorAus +
-        ", motorEin " + motorConfig.motorEin +
-        ", skipGpio " + motorConfig.skipGpio + 
-        ", skipGpioIR " + motorConfig.skipGpioIR
-    );
+        ", pinHoch " + pinHoch +
+        ", pinRunter " + pinRunter +
+        ", pinIR " + pinIR +
+        ", motorAus " + motorAus +
+        ", motorEin " + motorEin +
+        ", skipGpio " + skipGpio +
+        ", skipGpioIR " + skipGpioIR, 'info', 'gpio-relais');
 
     init();
 };
@@ -48,37 +47,37 @@ configure = (pinHoch, pinRunter, pinIR, motorAus, motorEin, skipGpio, skipGpioIR
 init = () => {    
     if(!motorConfig.skipGpio || !motorConfig.skipGpioIR) {
         gpioControl.configure(motorConfig.skipGpio).catch(err => {
-            logging.add(`Error initializing GPIO control: ${err.message}`, 'error');
+            logging.add(`Error initializing GPIO control: ${err.message}`, 'error', 'gpio-relais');
         });
     }
 
     if (motorConfig.skipGpio) {
-        logging.add("Skipping real gpioMotor init due to skipGpio");
+        logging.add("Skipping real gpioMotor init due to skipGpio", 'info', 'gpio-relais');
     }
     else {
         global.klappeHoch = gpioControl.createGpioWrapper(motorConfig.pinHoch, 'high');
         global.klappeRunter = gpioControl.createGpioWrapper(motorConfig.pinRunter, 'high');
         motorConfig.gpioInit = true;
-        logging.add("motorGpio initialized");
+        logging.add("motorGpio initialized", 'info', 'gpio-relais');
     }
 
     if (motorConfig.skipGpioIR) {
-        logging.add("Skipping real gpioIR init due to skipGpio");
+        logging.add("Skipping real gpioIR init due to skipGpio", 'info', 'gpio-relais');
     }
     else {
         global.gpioIR = gpioControl.createGpioWrapper(motorConfig.pinIR, 'high');
         motorConfig.gpioIRInit = true;
-        logging.add("gpioIR initialized");
+        logging.add("gpioIR initialized", 'info', 'gpio-relais');
     }
 };
 
 stoppeMotor = () => {
-    logging.add("Stoppe Motor");
+    logging.add("Stoppe Motor", 'info', 'gpio-relais');
     if (motorConfig.skipGpio) {
-        logging.add("Skipping real gpioMotor init due to skipGpio");
+        logging.add("Skipping real gpioMotor init due to skipGpio", 'info', 'gpio-relais');
     }
     else if (!motorConfig.gpioInit) {
-        logging.add("Cannot stop motor, Gpio not initialized");
+        logging.add("Cannot stop motor, Gpio not initialized", 'warn', 'gpio-relais');
     }
     else {
         global.klappeHoch.writeSync(motorConfig.motorAus);
@@ -87,12 +86,12 @@ stoppeMotor = () => {
 }
 
 fahreHoch = () => {
-    logging.add("Fahre hoch");
+    logging.add("Fahre hoch", 'info', 'gpio-relais');
     if (motorConfig.skipGpio === true) {
-        logging.add("Skipping real gpioMotor init due to skipGpio");
+        logging.add("Skipping real gpioMotor init due to skipGpio", 'info', 'gpio-relais');
     }
     else if (motorConfig.gpioInit === false) {
-        logging.add("Cannot go up, Gpio not initialized");
+        logging.add("Cannot go up, Gpio not initialized", 'warn', 'gpio-relais');
     }
     else {
         setNightVision(false);
@@ -102,13 +101,13 @@ fahreHoch = () => {
 }
 
 fahreRunter = () => {
-    logging.add("Fahre runter");
-    logging.add(`skipGpio: ${motorConfig.skipGpio}  gpioInit: ${motorConfig.gpioInit}`);
+    logging.add("Fahre runter", 'info', 'gpio-relais');
+    logging.add(`skipGpio: ${motorConfig.skipGpio}  gpioInit: ${motorConfig.gpioInit}`, 'info', 'gpio-relais');
     if (motorConfig.skipGpio === true) {
-        logging.add("Skipping real gpioMotor init due to skipGpio");
+        logging.add("Skipping real gpioMotor init due to skipGpio", 'info', 'gpio-relais');
     }
     else if (motorConfig.gpioInit === false) {
-        logging.add("Cannot go down, Gpio not initialized");
+        logging.add("Cannot go down, Gpio not initialized", 'warn', 'gpio-relais');
     }
     else {
         setNightVision(false);
@@ -119,18 +118,18 @@ fahreRunter = () => {
 
 setNightVision = (onoff) => {
     if(onoff == true && motorIsOn()) {
-        logging.add("gpio-relais.setNightVision(true) Motor is running, cannot turn on IR!","debug");
+        logging.add("gpio-relais.setNightVision(true) Motor is running, cannot turn on IR!", "debug", 'gpio-relais');
         return false;
     }
     else if (onoff == true || onoff == false) {
         let newStatus = (onoff == true ? motorConfig.motorEin : motorConfig.motorAus);
-        logging.add("gpio-relais.setNightVision(true) Turning Night Vision "+(onoff ? "on" : "off"),"debug");
+        logging.add("gpio-relais.setNightVision(true) Turning Night Vision "+(onoff ? "on" : "off"), "debug", 'gpio-relais');
         global.gpioIR.writeSync(newStatus);
         IRlogChange(onoff);
         return true;
     }
     else {
-        logging.add("gpio-relais.setNightVision(onoff) invalid argument true/false",'warn'); 
+        logging.add("gpio-relais.setNightVision(onoff) invalid argument true/false", 'warn', 'gpio-relais'); 
         return false;
     }
 }
@@ -142,14 +141,14 @@ motorIsOn = () => {
 
 IRIsOn = () => {
     let status = global.gpioIR.readSync() == motorConfig.motorEin;
-    logging.add(`IR on: ${status}`); 
+    logging.add(`IR on: ${status}`, 'info', 'gpio-relais'); 
     return status;
 }
 
 IRlogChange = (newStatus) => {
     let now = performance.now();
     if(nightVisionStatus.value !== null) {
-        logging.add('Night vision changed from '+ nightVisionStatus.value +' to '+ newStatus +' after '+ Math.floor((now - nightVisionStatus.time) / 1000) + 's');
+        logging.add('Night vision changed from '+ nightVisionStatus.value +' to '+ newStatus +' after '+ Math.floor((now - nightVisionStatus.time) / 1000) + 's', 'info', 'gpio-relais');
     }
     nightVisionStatus.time = now;
     nightVisionStatus.value = newStatus;

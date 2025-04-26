@@ -53,7 +53,7 @@ configure = (lightConfigObj) => {
 
             // Type checking
             if(!lightConfig.door.match(/^open|closed|any$/)) {
-                logging.add("Invalid value for 'door' in light configuration. Set to closed|open|any.","warn");
+                logging.add("Invalid value for 'door' in light configuration. Set to closed|open|any.","warn","heating");
                 return;
             }
 
@@ -62,7 +62,7 @@ configure = (lightConfigObj) => {
             const toTime   = suncalc.suncalcStringToTime(lightConfig.to);
 
             if(!fromTime || !toTime) {
-                logging.add("Invalid Time for Light Configuration.","warn");
+                logging.add("Invalid Time for Light Configuration.","warn","heating");
                 return;
             }
 
@@ -79,15 +79,13 @@ configure = (lightConfigObj) => {
         }
     });
 
-    logging.add("Heating Configure New");
+    logging.add("Heating Configure", 'info', 'heating');
 };
 
 const checkTimeFrame = (from,to) => {
     const minutesNow  = parseInt(moment().format('H'))*60 + parseInt(moment().format('m'));
     const minutesFrom = parseInt(from.h)*60 + parseInt(from.m);
     const minutesTo   = parseInt(to.h)*60 + parseInt(to.m);
-
-    //logging.add("Check Timeframe: from:("+from.toString()+") to:("+to.toString()+") minutesNow:("+minutesNow+") result:("+(minutesFrom <= minutesNow  && minutesTo >= minutesNow )+")");
 
     return (minutesFrom <= minutesNow  && minutesTo >= minutesNow );
 }
@@ -108,9 +106,9 @@ const needToHeatLonger = () => {
 }
 
 const setEnableHeating = (boolYesNo) => {
-// Add debug logging
-    //logging.add(`setEnableHeating called with value: ${boolYesNo}`);
-    //logging.add(`Previous status: ${JSON.stringify(status, null, 2)}`);
+    // Add debug logging
+    //logging.add(`setEnableHeating called with value: ${boolYesNo}`    , 'debug', 'heating');
+    //logging.add(`Previous status: ${JSON.stringify(status, null, 2)}` , 'debug', 'heating');
 
     // For GUI Usage
     if(boolYesNo === true) {
@@ -227,14 +225,14 @@ const checkLight = (newTemperature = null) => {
 
     if(lightNeeded) {
         // Heated long enough?
-        logging.add("Light Check. Parameters met. Lights on.","debug")
+        logging.add("Light Check. Parameters met. Lights on.","debug","heating")
     }
     else if(needToHeatLonger()) {
         lightNeeded = true;
-        logging.add("Light Check. Not on long enough ("+config.minimumLightMins+"min) - Lights on.","debug")
+        logging.add("Light Check. Not on long enough ("+config.minimumLightMins+"min) - Lights on.","debug","heating")
     }
     else {
-        logging.add("Light Check. Parameters not met. Lights off.","debug")
+        logging.add("Light Check. Parameters not met. Lights off.","debug","heating")
         status.lightOn = false;
         status.heatingOn = false;
     }

@@ -2,6 +2,7 @@ var logging = require('../utilities/logging.js');
 const bme280 = require('bme280');
 var moment = require('moment');
 var heating = require('../climate/heating.js');
+var events = require('../utilities/events.js');
 
 var status = {
     busy: false,
@@ -51,14 +52,14 @@ var config = {
 }
 
 configure = (port, intervalSec) => {
-    logging.add(`BME280 configure Port ${port} Interval ${intervalSec}`);
+    logging.add(`BME280 configure Port ${port} Interval ${intervalSec}`, 'info', 'bme280');
     status.intervalSec = intervalSec;
     config.port = Number(port);
 }
 
 readBME280 = () => {
     if (!status.busy && config.port !== null) {
-        logging.add("BME280 readSensor() getting sensor data","debug");
+        logging.add("readSensor() getting sensor data","debug", 'bme280');
         status.busy = true;
         bme280.open({ i2cAddress: config.port }).then(async sensor => {
             status.values = await sensor.read();
@@ -66,8 +67,12 @@ readBME280 = () => {
             status.busy = false;
             let now = moment();
             status.time = now;
-            logging.add(`BME280 temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`,"debug");
+            logging.add(`temperature ${status.values.temperature.toFixed(2)} pressure ${status.values.pressure.toFixed(2)} humidity ${status.values.humidity.toFixed(2)}`,"debug", 'bme280');
             logging.thingspeakLog("field1="+status.values.temperature.toFixed(2)+"&field2="+status.values.pressure.toFixed(2)+"&field3="+status.values.humidity.toFixed(2));
+
+            // Send temperature and humidity events
+            events.send('temperature', status.values.temperature.toFixed(1));
+            events.send('humidity', status.values.humidity.toFixed(0));
 
             // Minutely history, preserved for one hour
             const keepEverySec = 60; // How often to preserve a value
@@ -217,7 +222,16 @@ readBME280 = () => {
     }
 }
 
-exports.configure = configure;
-exports.readSensor = readBME280;
-exports.status = status;
+getTemperature = () => {
+    return status.values.temperature;
+}
 
+getHumidity = () => {
+    return status.values.humidity;
+}
+
+exports.configure = configure;
+exports.readBME280 = readBME280;
+exports.status = status;
+exports.getTemperature = getTemperature;
+exports.getHumidity = getHumidity;

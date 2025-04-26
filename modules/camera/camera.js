@@ -4,6 +4,7 @@ var gpioRelais = require('../gpio/gpio-relais.js');
 var events = require('../utilities/events.js');
 var telegram = require('../integrations/telegram.js');
 var suncalcHelper = require('../utilities/suncalc.js');
+var bme280 = require('../temperature/bme280.js');
 
 var camera = {
     image: null,
@@ -56,7 +57,7 @@ configure = (intervalSec, maxAgeSec, autoTakeMin) => {
     
     logging.add("Camera Configure: "+
         "  intervalSec " + camera.intervalSec + 
-        "  autoTakeMin " + camera.autoTakeMin
+        "  autoTakeMin " + camera.autoTakeMin, 'info', 'camera'
     );
 
     gpioRelais.setNightVision(false);
@@ -74,43 +75,17 @@ queueNightvision = () => {
 // TODO Implement check if it's dark
 queueTelegram = () => {
   camera.telegramQueue = true;
-  var isDark = (moment().hour() >= 18 || moment().hour() < 8);
+  
+  // Use suncalc helper to determine if it's dark outside
+  const isDark = suncalcHelper.isDark();
 
   if(isDark) {
-    logging.add("Telegram photo with IR","info");
+    logging.add("Telegram photo with IR","info", 'camera');
     camera.ir.queued = true;
   }
   else {
-    logging.add("Telegram photo without IR","info");
-		//camera.ir.queued = true;
+    logging.add("Telegram photo without IR","info", 'camera');
   }
-  
-  /*
-  // Get the sunset and sunrise times using your suncalcStringToTime function
-  const sunsetTime = suncalcHelper.suncalcStringToTime('sunset-60');
-  const sunriseTime = suncalcHelper.suncalcStringToTime('sunrise+60');
-
-  // If either failed, we can't determine darkness and should return
-  if (!sunsetTime || !sunriseTime) {
-    camera.ir.queued = true;
-    return;
-  }
-
-  // Convert these times into today's moment objects
-  const sunsetMoment = moment().hour(sunsetTime.h).minute(sunsetTime.m);
-  const sunriseMoment = moment().hour(sunriseTime.h).minute(sunriseTime.m);
-
-  // Now, get the current moment
-  const currentMoment = moment();
-
-  // Check if it's dark based on sunset and sunrise times
-  if (currentMoment.isAfter(sunsetMoment) || currentMoment.isBefore(sunriseMoment)) {
-    camera.ir.queued = true;
-    logging.add("Telegram photo - it is dark, use IR","debug");  
-  }
-  else {
-    logging.add("Telegram photo - it is NOT dark, no IR","debug");
-  }*/
 }
 
 photoIntervalSec = () => {
@@ -124,7 +99,7 @@ checkCamera = () => {
     camera.queued = true;
   }
   
-  logging.add("Queues Photo "+ (camera.queued ? 'Y' : 'N') + "   Nightvision "+ (camera.ir.queued ? 'Y' : 'N') + "  Telegram    "+ (camera.telegramQueue ? 'Y' : 'N'),"debug");
+  logging.add("Queued Photo "+ (camera.queued ? 'Y' : 'N') + "   Nightvision "+ (camera.ir.queued ? 'Y' : 'N') + "  Telegram    "+ (camera.telegramQueue ? 'Y' : 'N'),"debug", 'camera');
 
   if(camera.queued || camera.ir.queued || camera.telegramQueue) {
     photoStatus = this.takePhoto();
@@ -151,24 +126,24 @@ takePhoto = (nightVision = false) => {
 
     // Is it really necessary to take another picture?
     if(now <= camera.earliestTimeNextPhoto /* && !nightVision*/) {
-      logging.add("Not taking picture. Picture still good.","debug");
+      logging.add("Not taking picture. Picture still good.","debug", 'camera');
       return false;
       // TODO return "picture still good";
     }
     else if(camera.busy) {
-      logging.add("Not taking picture. Camera busy.","debug");
+      logging.add("Not taking picture. Camera busy.","debug", 'camera');
       return false;
       // TODO return "camera busy";
     }
     else {
-      logging.add("Taking picture","debug");
+      logging.add("Taking picture","debug", 'camera');
 
       if(nightVision && !gpioRelais.setNightVision(true)) {
-        logging.add(`Could not turn on Night Vision`, 'warn');
+        logging.add(`Could not turn on Night Vision`, 'warn', 'camera');
       }
 
       camera.busy = true;
-      logging.add("Taking a"+ (nightVision ? " night vision" : "") +" picture","debug");
+      logging.add("Taking a"+ (nightVision ? " night vision" : "") +" picture","debug", 'camera');
       let takingPicture = moment();
 
       cam.takePhoto().then((photo) => {
@@ -190,7 +165,7 @@ takePhoto = (nightVision = false) => {
         
         // Turn off Infrared LEDs again
         if(nightVision && !gpioRelais.setNightVision(false)) {
-          logging.add("Error when turning night vision off","warn");
+          logging.add("Error when turning night vision off","warn", 'camera');
         }
 
         // Send picture via Telegram
@@ -213,7 +188,7 @@ takePhoto = (nightVision = false) => {
         let tookPicture = moment();
         let duration = tookPicture.diff(takingPicture);
         cameraTimeStats.push(duration);
-        logging.add(`Took a ${nightVision ? "night vision " : ""}picture - ${duration} ms`);
+        logging.add(`Took a ${nightVision ? "night vision " : ""}picture - ${duration} ms`, 'info', 'camera');
 
         // Calculate statistics of the recordings
         camera.statistics.avg = Math.round(cameraTimeStats.reduce((a,b) => (a+b)) / cameraTimeStats.length / 100) / 10;
@@ -222,13 +197,13 @@ takePhoto = (nightVision = false) => {
         camera.statistics.pics = cameraTimeStats.length;
         // Only periodically log the camera statistics
         if(camera.statistics.pics == 1 || camera.statistics.pics%100 == 0) {
-          logging.add(`Camera Statistics: ${camera.statistics.pics} pics, Avg ${camera.statistics.avg}s, Min ${camera.statistics.min}s, Max ${camera.statistics.max}s`);
+          logging.add(`Camera Statistics: ${camera.statistics.pics} pics, Avg ${camera.statistics.avg}s, Min ${camera.statistics.min}s, Max ${camera.statistics.max}s`, 'info', 'camera');
         }
 
         // Purge Camera Statistics if the record gets too large
         cameraStatisticsTreshold = 5000;
         if(cameraTimeStats.length > cameraStatisticsTreshold) {
-          logging.add(`Camera Statistics: Purging (${cameraStatisticsTreshold} elements treshold reached after ${moment().diff(cameraTimeStatsSince,'days')} days)`);
+          logging.add(`Camera Statistics: Purging (${cameraStatisticsTreshold} elements treshold reached after ${moment().diff(cameraTimeStatsSince,'days')} days)`, 'info', 'camera');
           cameraTimeStats = [];
         }
 
@@ -236,6 +211,24 @@ takePhoto = (nightVision = false) => {
         if(camera.lastRequest && !nightVision) {
           camera.takeUntil = camera.lastRequest.clone();
           camera.takeUntil.add(camera.autoTakeMin,'minutes');
+        }
+      })
+      .catch((error) => {
+        // Handle camera errors
+        camera.busy = false;
+        logging.add(`Failed to take photo: ${error.message}`, 'error', 'camera');
+        
+        // Ensure night vision is turned off on error
+        if(nightVision) {
+          gpioRelais.setNightVision(false);
+        }
+        
+        // If this was a queued request, keep it queued for retry
+        if(camera.queued || camera.ir.queued || camera.telegramQueue) {
+          logging.add("Keeping photo request in queue for retry", 'warn', 'camera');
+        } else {
+          camera.queued = false;
+          camera.ir.queued = false;
         }
       });
       return true;
@@ -288,8 +281,8 @@ getSvg = (which = "normal") => {
         html += '<image overflow="visible" width="1296" height="972" xlink:href="'+ picUrl +'"/>';
         html += '<text font-family="Arial, Helvetica, sans-serif" x="10" y="40" fill="white" font-size="30px">';
         html +=   '🐔 '+ moment(cameraObj.time).format("HH:mm:ss") + ' (' + moment(cameraObj.time).fromNow() /*+' - '+ new moment().diff(cameraObj.time)/1000 */ + ') '
-        html +=   Math.round(getTemperature() * 10) /10 + '°C   ';
-        html +=   Math.round(getHumidity()) + '%'
+        html +=   Math.round(bme280.getTemperature() * 10) /10 + '°C   ';
+        html +=   Math.round(bme280.getHumidity()) + '%'
         html += '</text>';
       }
       else {
@@ -297,8 +290,8 @@ getSvg = (which = "normal") => {
         html += '<text x="10" y="200" fill="black" font-size="100px">Ich habe leider</text>';
         html += '<text x="50" y="300" fill="black" font-size="100px">kein '+ (which == 'nightvision' ? 'Nachtf' : 'F') +'oto</text>';
         html += '<text x="90" y="400" fill="black" font-size="100px">für dich</text>';
-        if(getTemperature()) {
-          html += '<text x="90" y="430" fill="black" font-size="20px">aber im Stall sind es '+ Math.round(getTemperature() * 10) /10 +' °C</text>'; 
+        if(bme280.getTemperature()) {
+          html += '<text x="90" y="430" fill="black" font-size="20px">aber im Stall sind es '+ Math.round(bme280.getTemperature() * 10) /10 +' °C</text>'; 
         }
       }
             

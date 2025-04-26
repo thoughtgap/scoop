@@ -39,9 +39,10 @@ function validLogLevel(level, defaultLevel = 'info') {
     return validLogLevels.includes(level) ? level : defaultLevel;
 }
 
-add = (message, type = "info") => {
+add = (message, type = "info", module = "unknown") => {
     type = validLogLevel(type, 'info');
-    logger.log(type, message);
+    const formattedMessage = `[${module}] ${message}`;
+    logger.log(type, formattedMessage);
 }
 
 const setLogLevel = (logLevel) => {

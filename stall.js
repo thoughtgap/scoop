@@ -11,7 +11,9 @@ var logging = require('./modules/utilities/logging.js');
 
 var events = require('./modules/utilities/events.js');
 
+// Load Config
 let config = require('./config.json');
+
 const bootTimestamp = moment();
 logging.thingspeakSetAPIKey(config.thingspeakAPI);
 logging.setLogLevel(config.logLevel);
@@ -20,13 +22,13 @@ const ganzeFahrtSek = config.ganzeFahrtSek;
 
 const skipGpio = {
   motor: config.skipGpio.motor,
-  dht22: config.skipGpio.dht22,
   sensoren: config.skipGpio.sensoren,
   bme280: config.skipGpio.bme280,
   ir: config.skipGpio.ir,
   shelly: config.skipGpio.shelly
 }
 
+// GPIO Init
 var gpioRelais = require('./modules/gpio/gpio-relais.js');
 gpioRelais.configure( config.gpioPorts.out.hoch,
                 config.gpioPorts.out.runter,
@@ -36,54 +38,7 @@ gpioRelais.configure( config.gpioPorts.out.hoch,
                 skipGpio.motor,
                 skipGpio.ir);
 
-if(!skipGpio.bme280) {
-  logging.add("Initializing BME280 Temperature Sensor");
-  var bme280 = require('./modules/temperature/bme280.js');
-  bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
-  logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`);
-  bme280.readSensor();
-}
-else {
-  logging.add("Skipping BME280 Temperature Sensor");
-}
-getTemperature = () => {
-  if(!skipGpio.bme280) {
-    return bme280.status.values.temperature;
-  }
-  return null;
-}
-getHumidity = () => {
-  if(!skipGpio.bme280) {
-    return bme280.status.values.humidity;
-  }
-  return null;
-}
-
-var telegram = require('./modules/integrations/telegram.js');
-telegram.configure(config.telegram.sendMessages,
-                  config.telegram.token,
-                  config.telegram.chatId);
-
-if(!skipGpio.dht22) {
-  logging.add("Initializing DHT22 Temperature Sensor");
-  var dht22 = require('./modules/temperature/dht22.js');
-  dht22.configure(config.gpioPorts.out.dht22, config.intervals.dht22);
-  dht22.readSensor();
-}
-else {
-  logging.add("Skipping DHT22 Temperature Sensor");
-}
-
-if(!skipGpio.cpuTemp) {
-  logging.add("Initializing CPU Temperature Sensor");
-  var cpuTemp = require('./modules/temperature/cpu.js');
-  cpuTemp.configure(config.intervals.cpu);
-  cpuTemp.readSensor();
-}
-else {
-  logging.add("Skipping CPU Temperature Sensor");
-}
-
+// Hatch Init
 var klappenModul = require('./modules/hatch/klappe.js');
 klappenModul.configure(
   config.sensorObenMontiert,
@@ -93,10 +48,9 @@ klappenModul.configure(
   config.korrekturSekunden,
   skipGpio
 );
+klappenModul.init();
 
-klappenModul.stoppeKlappe();
-logging.add("Motor initialisiert");
-
+/*
 sensoren = {
   sensorOben: {
     value: null,
@@ -208,7 +162,7 @@ function leseSensoren() {
     }, sensoren.intervalSec * 1000);
   }
 }
-leseSensoren();
+leseSensoren();*/
 
 
 // function setSensorMontiert(pos,boo) {
@@ -233,7 +187,34 @@ leseSensoren();
 //   return {success: success, message: message};
 // }
 
-klappenModul.init();
+// BME280 Init
+if(!skipGpio.bme280) {
+  logging.add("Initializing BME280 Temperature Sensor", 'info', 'stall');
+  var bme280 = require('./modules/temperature/bme280.js');
+  bme280.configure(config.gpioPorts.in.bme280, config.intervals.bme280);
+  logging.add(`CONFIG BME Port ${config.gpioPorts.out.bme280}, Intervall ${config.intervals.bme280}`, 'info', 'stall');
+  bme280.readBME280();
+}
+else {
+  logging.add("Skipping BME280 Temperature Sensor", 'info', 'stall');
+}
+
+// Telegram Init
+var telegram = require('./modules/integrations/telegram.js');
+telegram.configure(config.telegram.sendMessages,
+                  config.telegram.token,
+                  config.telegram.chatId);
+
+// CPU Temperature Init
+if(!skipGpio.cpuTemp) {
+  logging.add("Initializing CPU Temperature Sensor", 'info', 'stall');
+  var cpuTemp = require('./modules/temperature/cpu.js');
+  cpuTemp.configure(config.intervals.cpu);
+  cpuTemp.readSensor();
+}
+else {
+  logging.add("Skipping CPU Temperature Sensor", 'info', 'stall');
+}
 
 var camera = require('./modules/camera/camera.js');
 camera.configure(config.camera.intervalSec, config.camera.maxAgeSec, config.camera.autoTakeMin);
@@ -259,8 +240,11 @@ app.use(compression());
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-
-  logging.add(`req ${req.method} ${req.originalUrl} from ${( req.headers['x-forwarded-for'] || req.connection.remoteAddress )}`, 'debug');
+  // Add security headers for HTTPS
+  res.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.header("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://ajax.googleapis.com; img-src 'self' data: blob:;");
+  
+  logging.add(`req ${req.method} ${req.originalUrl} from ${( req.headers['x-forwarded-for'] || req.connection.remoteAddress )}`, 'debug', 'stall');
   next();
 });
 
@@ -270,8 +254,15 @@ app.get('/', function (req, res) {
   res.redirect('/frontend/index.html');
 });
 
-// Deliver frontend
-app.use('/frontend', express.static(__dirname + '/frontend'));
+// Deliver frontend with proper caching headers
+app.use('/frontend', express.static(__dirname + '/frontend', {
+  maxAge: '1d',
+  setHeaders: function(res, path) {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 app.get('/status', function (req, res) {
   res.send({
@@ -286,9 +277,8 @@ app.get('/status', function (req, res) {
     skipGpio: skipGpio,
     bme280: bme280.status,
     bewegungSumme: klappenModul.bewegungSumme(),
-    //dht22: dht22.status,
     cpuTemp: cpuTemp.status,
-    sensoren: sensoren,
+    //sensoren: sensoren,
     camera: {
       image: 'http://192.168.31.21/cam',
       time: camera.data.time,
@@ -451,5 +441,5 @@ app.get('/light/disable', function (req, res) {
 app.get('/events', events.sse.init);
 
 app.listen(3000, function () {
-  logging.add('listening on port 3000!');
+  logging.add('listening on port 3000!', 'info', 'stall');
 });
