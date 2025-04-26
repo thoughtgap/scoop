@@ -99,6 +99,7 @@ checkCamera = () => {
     camera.queued = true;
   }
   
+  logging.add("checkCamera() " + (camera.busy ? 'busy' : ''), 'debug', 'camera');
   logging.add("Queued Photo "+ (camera.queued ? 'Y' : 'N') + "   Nightvision "+ (camera.ir.queued ? 'Y' : 'N') + "  Telegram    "+ (camera.telegramQueue ? 'Y' : 'N'),"debug", 'camera');
 
   if(camera.queued || camera.ir.queued || camera.telegramQueue) {
