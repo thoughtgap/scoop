@@ -118,6 +118,10 @@ gpioRelais.initPromise()
     shelly.configure(config.shelly.url, config.shelly.intervalSec);
     shelly.getShellyStatus();
 
+    // Initialize MQTT module
+    var mqtt = require('./modules/utilities/mqtt.js');
+    mqtt.initialize();
+    
     app.use(compression());
 
     // Handle http requests
