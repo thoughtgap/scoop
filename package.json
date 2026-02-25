@@ -25,7 +25,7 @@
     "cron": "^1.8.2",
     "express": "^4.22.1",
     "express-sse": "^0.5.3",
-    "form-data": "^4.0.0",
+    "form-data": "^4.0.4",
     "libcamera": "^1.0.7",
     "moment": "^2.29.4",
     "mqtt": "^5.0.0",
